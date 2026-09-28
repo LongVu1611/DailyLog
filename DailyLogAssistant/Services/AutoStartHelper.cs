@@ -7,12 +7,13 @@ namespace DailyLogAssistant.Services;
 public sealed class AutoStartHelper
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string AppName = "DailyLogAssistant";
+    private const string AppName = "PersonalLogManager";
 
     public void SetEnabled(bool enabled)
     {
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true)
             ?? Registry.CurrentUser.CreateSubKey(RunKey);
+        key.DeleteValue("DailyLogAssistant", throwOnMissingValue: false);
         if (enabled)
         {
             var executable = Environment.ProcessPath

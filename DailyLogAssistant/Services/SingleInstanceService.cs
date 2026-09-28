@@ -4,8 +4,8 @@ namespace DailyLogAssistant.Services;
 
 public sealed class SingleInstanceService : IDisposable
 {
-    private const string MutexName = @"Local\DailyLogAssistant-Mutex";
-    private const string EventName = @"Local\DailyLogAssistant-Activate";
+    private const string MutexName = @"Local\PersonalLogManager-Mutex";
+    private const string EventName = @"Local\PersonalLogManager-Activate";
     private readonly Mutex _mutex;
     private readonly EventWaitHandle _signal;
     private readonly CancellationTokenSource _stop = new();

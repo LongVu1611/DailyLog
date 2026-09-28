@@ -12,4 +12,7 @@ public sealed class AppSettings
     public DateOnly? ReminderDate { get; set; }
     public DateOnly? DismissedDate { get; set; }
     public DateTime? SnoozeUntil { get; set; }
+    public string Theme { get; set; } = "System";
+    public string AccentColor { get; set; } = "#315C4C";
+    public string WorkReportTemplatePath { get; set; } = "";
 }

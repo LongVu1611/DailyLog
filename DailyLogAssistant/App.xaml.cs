@@ -34,8 +34,10 @@ public partial class App : System.Windows.Application
 
             var dataFolder = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "DailyLogAssistant");
+                "PersonalLogManager");
             Directory.CreateDirectory(Path.Combine(dataFolder, "Logs"));
+            var databasePath = Path.Combine(dataFolder, "PersonalLogManager.db");
+            await LegacyDatabaseMigrator.CopyDailyLogDatabaseAsync(databasePath);
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.File(Path.Combine(dataFolder, "Logs", "application-.log"),
@@ -47,39 +49,68 @@ public partial class App : System.Windows.Application
                 .ConfigureServices(services =>
                 {
                     services.AddDbContextFactory<AppDbContext>(options =>
-                        options.UseSqlite($"Data Source={Path.Combine(dataFolder, "DailyLogAssistant.db")}"));
+                        options.UseSqlite($"Data Source={databasePath}"));
                     services.AddSingleton<DatabaseInitializer>();
                     services.AddSingleton<LogService>();
+                    services.AddSingleton<ILogService>(provider => provider.GetRequiredService<LogService>());
+                    services.AddSingleton<ITagService, TagService>();
+                    services.AddSingleton<ICategoryService, CategoryService>();
                     services.AddSingleton<SettingsService>();
+                    services.AddSingleton<ISettingsService>(provider => provider.GetRequiredService<SettingsService>());
                     services.AddSingleton<ExportService>();
+                    services.AddSingleton<IExportService>(provider => provider.GetRequiredService<ExportService>());
+                    services.AddSingleton<ILetterExportService, LetterExportService>();
+                    services.AddSingleton<IExcelReportService, ExcelReportService>();
+                    services.AddSingleton<INotificationService, NotificationService>();
+                    services.AddSingleton<ThemeService>();
                     services.AddSingleton<StatisticsService>();
+                    services.AddSingleton<IStatisticsService>(provider => provider.GetRequiredService<StatisticsService>());
                     services.AddSingleton<AutoStartHelper>();
                     services.AddSingleton<MainViewModel>();
                     services.AddSingleton<MainWindow>();
                     services.AddSingleton<DailyReminderService>();
+                    services.AddSingleton<IReminderService>(provider => provider.GetRequiredService<DailyReminderService>());
                     services.AddHostedService(provider => provider.GetRequiredService<DailyReminderService>());
                 })
                 .Build();
 
             await _host.Services.GetRequiredService<DatabaseInitializer>().InitializeAsync();
+            var templateFolder = Path.Combine(dataFolder, "Templates");
+            Directory.CreateDirectory(templateFolder);
+            var templatePath = Path.Combine(templateFolder, "WorkReportTemplate.xlsx");
+            if (!File.Exists(templatePath))
+            {
+                var bundledTemplate = Path.Combine(AppContext.BaseDirectory, "Resources", "WorkReportTemplate.xlsx");
+                if (File.Exists(bundledTemplate)) File.Copy(bundledTemplate, templatePath);
+                else ExcelReportService.CreateDefaultTemplate(templatePath);
+            }
+            var settingsService = _host.Services.GetRequiredService<SettingsService>();
+            var appSettings = await settingsService.GetAsync();
+            if (string.IsNullOrWhiteSpace(appSettings.WorkReportTemplatePath))
+            {
+                appSettings.WorkReportTemplatePath = templatePath;
+                await settingsService.SaveAsync(appSettings);
+            }
+            _host.Services.GetRequiredService<AutoStartHelper>().SetEnabled(appSettings.StartWithWindows);
             var window = _host.Services.GetRequiredService<MainWindow>();
             var viewModel = _host.Services.GetRequiredService<MainViewModel>();
             await viewModel.InitializeAsync();
+            _host.Services.GetRequiredService<ThemeService>().Apply(viewModel.Settings);
             await _host.StartAsync();
             MainWindow = window;
             _singleInstance.ActivatePrimary += (_, _) =>
                 Dispatcher.BeginInvoke(new Action(window.ShowDashboard));
-            if (viewModel.Settings.LaunchLogAutomatically)
+            if (appSettings.LaunchLogAutomatically)
                 window.ShowDailyLog();
             else
                 window.Show();
-            Log.Information("ApplicationStarted");
+            Log.Information("PersonalLogManagerStarted");
         }
         catch (Exception exception)
         {
             Log.Error(exception, "Application startup failed");
-            System.Windows.MessageBox.Show($"Daily Log Assistant could not start.\n\n{exception.Message}",
-                "Daily Log Assistant", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show($"Personal Log Manager could not start.\n\n{exception.Message}",
+                "Personal Log Manager", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }
@@ -89,13 +120,13 @@ public partial class App : System.Windows.Application
         Log.Error(e.Exception, "UnhandledException");
         System.Windows.MessageBox.Show(
             $"An unexpected error occurred. Your saved logs are safe.\n\n{e.Exception.Message}",
-            "Daily Log Assistant", MessageBoxButton.OK, MessageBoxImage.Error);
+            "Personal Log Manager", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }
 
     protected override async void OnExit(ExitEventArgs e)
     {
-        Log.Information("ApplicationClosed");
+        Log.Information("PersonalLogManagerClosed");
         if (_host is not null)
         {
             await _host.StopAsync(TimeSpan.FromSeconds(5));

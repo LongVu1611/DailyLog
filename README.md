@@ -1,24 +1,34 @@
-# Daily Log Assistant
+# Personal Log Manager
 
-A private, offline Windows desktop app for recording one daily log, reviewing/searching previous entries, and getting a configurable end-of-day reminder. It uses WPF, MVVM, SQLite, and a Windows notification-area icon; no account, server, or network connection is required at runtime.
+Personal Log Manager is an offline-first Windows desktop app for work logs, personal diary entries, letters, notes, and custom categories. Logs are stored locally in SQLite and can be searched, tagged, reported, and exported without an account, server, or network connection.
 
 ## Features
 
-- Daily entries with work completed, blockers, tomorrow's plan, and notes; one entry per calendar day.
-- Dashboard, searchable history, editable/deletable entries, and streak/month statistics.
-- CSV and Markdown export, plus a SQLite database backup.
-- Configurable local-time reminder, snooze, dismiss-for-today, unlock/resume checks, and a "Test reminder now" action.
-- Notification-area menu, minimize-to-tray, current-user Windows startup option, and single-instance activation.
-- Rolling Serilog files and a local SQLite database.
+- **Log categories:** Work, Personal, Letter, Note, and user-created categories with an icon and color.
+- **Work tracking:** project, task, status, result, blockers, notes, tags, and a daily work reminder.
+- **Personal diary:** subject/person, mood, content, reminders-to-self, notes, and tags.
+- **Letters:** recipient, title, opening, body, closing, and signature; clean UTF-8 TXT and Markdown export.
+- **Tags:** comma-separated tags are created automatically while saving a log; the Tags page can rename, recolor, and delete tags.
+- **History:** global search across titles, content, project, result, blockers, notes, recipient, and tags; category, tag, status, and date filters; edit, duplicate, and confirmed delete.
+- **Weekly Excel report:** completed, unfinished, and following-week sections, with Vietnamese report columns and a bundled, replaceable workbook template.
+- **Other exports:** filtered CSV, TXT, Markdown, and an online-safe SQLite backup.
+- **Dashboard and statistics:** recent entries, work completion, streak, monthly/yearly totals, and category counts.
+- **Settings:** local 17:00 work reminder, snooze, dismiss for today, tray behavior, Windows startup, Light/Dark/System theme, and accent color.
+- Single-instance activation, notification-area menu, rolling Serilog logs, and migration of the previous Daily Log database.
+
+The daily reminder only checks for a **WORK** log. A Personal, Letter, or Note entry never satisfies or triggers the work reminder.
 
 ## Requirements
 
-- Windows 10 or later.
-- .NET 8 SDK to build and test. The published self-contained application does not require the SDK or a separate .NET runtime.
+- Windows 10/11, 64-bit.
+- .NET 8 SDK to build and test.
+- Inno Setup 6 to compile the optional Windows installer.
+
+The self-contained published application does not require .NET to be installed on the destination computer.
 
 ## Build and run
 
-From the repository root:
+Run these commands from the repository root in PowerShell:
 
 ```powershell
 dotnet restore .\DailyLogAssistant.sln
@@ -26,13 +36,15 @@ dotnet build .\DailyLogAssistant.sln
 dotnet run --project .\DailyLogAssistant\DailyLogAssistant.csproj
 ```
 
-Run automated tests:
+Run unit and SQLite/Excel integration tests:
 
 ```powershell
 dotnet test .\DailyLogAssistant.sln
 ```
 
-Publish a self-contained Windows x64 application:
+## Publish and create an installer
+
+Publish a self-contained, single-file Windows x64 app (the Excel template is copied alongside the executable):
 
 ```powershell
 dotnet publish .\DailyLogAssistant\DailyLogAssistant.csproj `
@@ -41,49 +53,49 @@ dotnet publish .\DailyLogAssistant\DailyLogAssistant.csproj `
   -o .\publish\win-x64
 ```
 
-Run `.\publish\win-x64\DailyLogAssistant.exe`. The publish folder contains the standalone Windows executable and its required files. Keep the folder intact when distributing the app.
-
-## Create an installer for another PC
-
-Build the self-contained publish folder first using the command above. Install [Inno Setup 6](https://jrsoftware.org/isinfo.php) on the build PC, then compile the installer script from the repository root:
+Run `.\publish\win-x64\PersonalLogManager.exe` directly, or compile the user-level setup program after installing Inno Setup 6:
 
 ```powershell
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" .\installer\DailyLogAssistant.iss
 ```
 
-The generated `.\publish\DailyLogAssistant-Setup-1.0.0.exe` installs the app for the current Windows user (no administrator access required), creates a Start Menu shortcut, offers an optional Desktop shortcut, and registers an uninstaller. Copy this setup file to the other 64-bit Windows PC and run it there. The app is self-contained; .NET does not need to be installed on the destination PC. The installer does not include existing user logs or settings.
+The installer is written to `.\publish\PersonalLogManager-Setup-2.0.0.exe`. It installs under the current user (no administrator access), adds a Start Menu shortcut, offers a Desktop shortcut, and registers an uninstaller. Copy the installer to another 64-bit Windows computer and run it there. User databases and settings are intentionally not included in the installer.
 
 ## First use
 
-Open **Settings** to choose a reminder time (24-hour local time, default `17:00`), enable reminders, and configure startup/tray behavior. **Test reminder now** exercises the reminder UI without waiting. Saving an entirely blank entry is rejected. Closing or minimizing the main window hides it in the notification area when **Minimize to tray** is enabled; choose **Exit** in the tray menu to quit.
+Select **Work**, **Personal**, **Letters**, or **Notes** in the sidebar to create an entry. Logs may be edited by opening them from History; delete asks for confirmation. Add one or more comma-separated tags in an entry, or manage tag names/colors in **Tags**. **+ Add custom category** asks for its name, icon, and color.
 
-The tray menu can open the dashboard, today's log, history, or settings. A second launch signals the running instance to show its dashboard.
+The **History** page supports full-text search plus category, tag, status, and date filtering. **Export** exports the selected date/category/tag range. The Excel option creates a weekly Work report; its date range also includes planned Work entries for the seven days after the report end date. The Letter editor has preview, TXT, and Markdown actions. Letter filenames use the `Letter-{slug}-{date}` pattern.
 
-## Data and logs
+The default work reminder is **17:00 local time**. Change it in **Settings**, save, and use **Test reminder now** to exercise the UI. A reminder checks whether a Work entry exists for the day; it does not require a particular Work status. Snoozes are 15 minutes, 30 minutes, or one hour. Dismiss suppresses reminders for that date. Starting after the reminder time, resuming from sleep, or unlocking Windows causes another due check. Enable **Start application with Windows** to receive reminders after sign-in.
 
-- Database: `%LOCALAPPDATA%\DailyLogAssistant\DailyLogAssistant.db`
-- Logs: `%LOCALAPPDATA%\DailyLogAssistant\Logs\application-YYYYMMDD.log`
+The app can minimize to the notification area. Use the tray menu to open the app, open today's Work editor, create a Note, open History/Export/Settings, or exit.
 
-The database directory is created on first launch. Back up or export entries from the app before removing or replacing the database.
+## Weekly Excel template
 
-## Windows startup
+`DailyLogAssistant\Resources\WorkReportTemplate.xlsx` is the bundled default template. It contains the three report sections and Vietnamese column headings described in the project requirements. Change **Settings → Work report template** to select a different `.xlsx`; templates must contain recognizable completed, unfinished, and next-week section headings. The exporter discovers section/header rows and maps columns by their heading text, inserts rows when needed, and preserves existing workbook styles where possible. If a selected workbook cannot be mapped, export falls back to the bundled-style report layout.
 
-Enable **Start application with Windows** in Settings and save. The app creates/removes a value under the current user's `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` key; administrator access is not required.
+The separate reference workbook named `Vu-Bao Cao Tuan - 21-9-2026.xlsx` was not present in the project files when this update was implemented. The bundled template follows the documented layout; select the original workbook in Settings to use its exact formatting if it is available.
 
-## Troubleshooting
+## Database, settings, and logs
 
-- **The app does not start:** check the latest log file. If the database is damaged or inaccessible, close the app and restore a backup; do not delete the only copy of the database.
-- **A reminder was missed:** reminders use the computer's local clock. Starting after the configured time, waking from sleep, or unlocking the session causes the app to check again if today's log is still missing.
-- **The app appears closed:** it may be minimized to the notification area. Use the tray icon to reopen it or choose **Exit** to stop it.
-- **Publish fails:** run `dotnet restore` and `dotnet publish` on Windows with the .NET 8 SDK installed. Publishing targets `win-x64`.
-- **Windows notification behavior:** the app uses a notification-area balloon for compatibility; Windows notification settings may suppress balloons. The in-app reminder remains available while the app is running.
+- SQLite database: `%LOCALAPPDATA%\PersonalLogManager\PersonalLogManager.db`
+- Application logs: `%LOCALAPPDATA%\PersonalLogManager\Logs\application-YYYYMMDD.log`
+- Default Excel template copied on first launch: `%LOCALAPPDATA%\PersonalLogManager\Templates\WorkReportTemplate.xlsx`
+- The previous `%LOCALAPPDATA%\DailyLogAssistant\DailyLogAssistant.db` is copied and migrated on first launch, preserving daily entries and reminder settings. The old database is left untouched.
 
-## Architecture
+The schema contains `Logs`, `Tags`, `LogTags`, `Categories`, and `AppSettings`, with date/category/status/title indexes and a many-to-many tag relationship. Category-specific fields are nullable in meaning and stored as empty strings where not applicable. User-provided content remains on the local machine unless exported by the user.
 
-`DailyLogAssistant.sln` contains the WPF desktop app and its unit-test project. The app separates EF Core/SQLite data access, reminder/settings/export/statistics services, an MVVM view model, and the WPF views. `EnsureCreated` initializes the local database on first run. Settings and reminder state are stored locally in SQLite.
+## Troubleshooting and limitations
 
-## Limitations
+- **A reminder did not appear:** the app must be running (or enabled at Windows sign-in); reminders use local Windows time. Check that today's Work entry is missing, the reminder is enabled, and the date was not dismissed.
+- **The app is not visible:** it may be in the notification area. Reopen it from the tray menu or choose **Exit** there.
+- **An Excel template was not applied:** use `.xlsx` and ensure it contains recognizable section titles and column headings. The report remains exportable using the default layout if mapping fails.
+- **Database migration:** migration preserves the previous Daily Log database and leaves the source file intact. The new database lives in the Personal Log Manager folder.
+- **Windows notification delivery:** notifications use the Windows notification-area balloon API; Windows notification settings can suppress balloons.
+- **Custom categories currently cannot be deleted from the UI.** Built-in categories are protected.
+- Reminders require a running app; a powered-off computer cannot show one until the app starts after Windows boots.
 
-- Reminders run only while the application is running; launch-at-login is optional and must be enabled. A fully shut-down computer cannot display a reminder until Windows and the app start again.
-- This initial version uses the system notification-area balloon rather than interactive Windows toast actions.
-- Statistics use the current local calendar and do not count future days in the current month's completion-rate denominator.
+## Architecture and dependencies
+
+The WPF application uses CommunityToolkit.Mvvm, dependency injection and hosted services, EF Core/SQLite, Serilog, and ClosedXML. UI state is in the MVVM view model; data access, categories/tags, reminder, theme, letter export, and Excel reporting are separate services behind service contracts. `DailyLogAssistant.Tests` covers reminder/date logic, SQLite CRUD/search/migration, tag/date filters, letter export, and Excel report/template generation.

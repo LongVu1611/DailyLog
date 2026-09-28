@@ -8,7 +8,7 @@ namespace DailyLogAssistant.Services;
 public sealed class DailyReminderService(
     LogService logs,
     SettingsService settings,
-    IHostApplicationLifetime lifetime) : BackgroundService
+    IHostApplicationLifetime lifetime) : BackgroundService, IReminderService
 {
     public event EventHandler? ReminderDue;
     private readonly SemaphoreSlim _checkLock = new(1, 1);
@@ -51,7 +51,9 @@ public sealed class DailyReminderService(
             var today = DateOnly.FromDateTime(now);
             if (_sessionLocked || !TimeOnly.TryParse(prefs.ReminderTime, out var reminderTime) ||
                 !ReminderPolicy.IsDue(now, reminderTime, prefs.ReminderEnabled,
-                    await logs.GetAsync(today, cancellationToken) is not null,
+                    await logs.GetAsync(today, cancellationToken) is not null ||
+                    (await logs.SearchAsync(new LogQuery(CategoryId: 1, From: today, To: today),
+                        cancellationToken)).Count > 0,
                     prefs.DismissedDate, prefs.ReminderDate, prefs.SnoozeUntil))
                 return;
 

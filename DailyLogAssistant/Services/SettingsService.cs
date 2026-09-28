@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DailyLogAssistant.Services;
 
-public sealed class SettingsService(IDbContextFactory<AppDbContext> factory)
+public sealed class SettingsService(IDbContextFactory<AppDbContext> factory) : ISettingsService
 {
     public async Task<AppSettings> GetAsync(CancellationToken cancellationToken = default)
     {
