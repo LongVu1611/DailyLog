@@ -1,4 +1,5 @@
 using DailyLogAssistant.Data;
+using DailyLogAssistant.Localization;
 using DailyLogAssistant.Models;
 using DailyLogAssistant.Services;
 using Microsoft.Data.Sqlite;
@@ -113,6 +114,24 @@ public sealed class LogServiceTests
     }
 
     [Fact]
+    public async Task GetRecentAsync_LimitsResultsAndIncludesCategories()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await using var context = await database.Factory.CreateDbContextAsync();
+        var work = context.Categories.Single(category => category.Name == "WORK");
+        context.Logs.AddRange(
+            new LogEntry { CategoryId = work.Id, Date = new DateOnly(2026, 9, 20), Title = "Older" },
+            new LogEntry { CategoryId = work.Id, Date = new DateOnly(2026, 9, 21), Title = "Recent" },
+            new LogEntry { CategoryId = work.Id, Date = new DateOnly(2026, 9, 22), Title = "Newest" });
+        await context.SaveChangesAsync();
+
+        var results = await database.Logs.GetRecentAsync(2);
+
+        Assert.Equal(new[] { "Newest", "Recent" }, results.Select(log => log.Title));
+        Assert.All(results, log => Assert.Equal("WORK", log.Category!.Name));
+    }
+
+    [Fact]
     public async Task Tags_CanBeRenamedRecoloredAndDeleted()
     {
         await using var database = await TestDatabase.CreateAsync();
@@ -157,11 +176,75 @@ public sealed class LogServiceTests
         var settings = await service.GetAsync();
         settings.Theme = "Dark";
         settings.AccentColor = "#7953A9";
+        settings.Language = "Русский";
         await service.SaveAsync(settings);
 
         var actual = await service.GetAsync();
         Assert.Equal("Dark", actual.Theme);
         Assert.Equal("#7953A9", actual.AccentColor);
+        Assert.Equal("Русский", actual.Language);
+    }
+
+    [Fact]
+    public void Localization_TranslatesInterfaceAndUsesLanguageCulture()
+    {
+        try
+        {
+            LocalizationService.SetLanguage("Tiếng Việt");
+            Assert.Equal("Tổng quan", LocalizationService.Translate("Dashboard"));
+            Assert.Equal("vi-VN", LocalizationService.Instance.CurrentCulture.Name);
+            Assert.Equal("Cần nhập tên danh mục.",
+                LocalizationService.TranslateException(new ArgumentException("Category name is required. (Parameter 'name')")));
+
+            LocalizationService.SetLanguage("Русский");
+            Assert.Equal("Главная", LocalizationService.Translate("Dashboard"));
+            Assert.Equal("ru-RU", LocalizationService.Instance.CurrentCulture.Name);
+
+            LocalizationService.SetLanguage("unsupported");
+            Assert.Equal("Dashboard", LocalizationService.Translate("Dashboard"));
+            Assert.Equal("en-US", LocalizationService.Instance.CurrentCulture.Name);
+        }
+        finally
+        {
+            LocalizationService.SetLanguage("English");
+        }
+    }
+
+    [Fact]
+    public async Task DatabaseInitializer_AddsLanguageToAnExistingSettingsTable()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                CREATE TABLE AppSettings (
+                    Id INTEGER NOT NULL PRIMARY KEY,
+                    ReminderTime TEXT NOT NULL DEFAULT '17:00',
+                    ReminderEnabled INTEGER NOT NULL DEFAULT 1,
+                    StartWithWindows INTEGER NOT NULL DEFAULT 0,
+                    MinimizeToTray INTEGER NOT NULL DEFAULT 1,
+                    LaunchLogAutomatically INTEGER NOT NULL DEFAULT 0,
+                    ShowNotification INTEGER NOT NULL DEFAULT 1,
+                    ReminderDate TEXT NULL,
+                    DismissedDate TEXT NULL,
+                    SnoozeUntil TEXT NULL,
+                    Theme TEXT NOT NULL DEFAULT 'System',
+                    AccentColor TEXT NOT NULL DEFAULT '#315C4C',
+                    WorkReportTemplatePath TEXT NOT NULL DEFAULT ''
+                );
+                INSERT INTO AppSettings (Id, ReminderTime) VALUES (1, '18:30');
+                """;
+            await command.ExecuteNonQueryAsync();
+        }
+        var factory = new TestContextFactory(connection);
+
+        await new DatabaseInitializer(factory).InitializeAsync();
+
+        await using var db = await factory.CreateDbContextAsync();
+        var settings = await db.Settings.SingleAsync();
+        Assert.Equal("English", settings.Language);
+        Assert.Equal("18:30", settings.ReminderTime);
     }
 
     [Fact]

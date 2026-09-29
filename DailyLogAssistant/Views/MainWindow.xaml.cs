@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using DailyLogAssistant.Localization;
 using DailyLogAssistant.Services;
 using DailyLogAssistant.ViewModels;
 using Microsoft.Win32;
@@ -33,12 +34,13 @@ public partial class MainWindow : Window
         _notifications = notifications;
         DataContext = viewModel;
         _viewModel.ReminderRequested += OnReminderRequested;
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         if (_notifications is NotificationService notificationService)
             notificationService.NotificationRequested += OnNotificationRequested;
         _trayIcon = new System.Windows.Forms.NotifyIcon
         {
             Icon = System.Drawing.SystemIcons.Application,
-            Text = "Personal Log Manager",
+            Text = LocalizationService.Translate("Personal Log Manager"),
             Visible = true,
             ContextMenuStrip = CreateTrayMenu()
         };
@@ -72,15 +74,15 @@ public partial class MainWindow : Window
     private System.Windows.Forms.ContextMenuStrip CreateTrayMenu()
     {
         var menu = new System.Windows.Forms.ContextMenuStrip();
-        menu.Items.Add("Open", null, (_, _) => ShowDashboard());
-        menu.Items.Add("Today's Work Log", null, (_, _) => ShowDailyLog());
-        menu.Items.Add("New Log", null, (_, _) =>
+        menu.Items.Add(LocalizationService.Translate("Open"), null, (_, _) => ShowDashboard());
+        menu.Items.Add(LocalizationService.Translate("Today's Work Log"), null, (_, _) => ShowDailyLog());
+        menu.Items.Add(LocalizationService.Translate("New Log"), null, (_, _) =>
             Dispatcher.Invoke(() => _viewModel.NewNoteCommand.Execute(null)));
-        menu.Items.Add("History", null, (_, _) => NavigateFromTray("History"));
-        menu.Items.Add("Export", null, (_, _) => NavigateFromTray("Export"));
-        menu.Items.Add("Settings", null, (_, _) => NavigateFromTray("Settings"));
+        menu.Items.Add(LocalizationService.Translate("History"), null, (_, _) => NavigateFromTray("History"));
+        menu.Items.Add(LocalizationService.Translate("Export"), null, (_, _) => NavigateFromTray("Export"));
+        menu.Items.Add(LocalizationService.Translate("Settings"), null, (_, _) => NavigateFromTray("Settings"));
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-        menu.Items.Add("Exit", null, (_, _) => Dispatcher.Invoke(() =>
+        menu.Items.Add(LocalizationService.Translate("Exit"), null, (_, _) => Dispatcher.Invoke(() =>
         {
             _exitRequested = true;
             System.Windows.Application.Current.Shutdown();
@@ -97,14 +99,24 @@ public partial class MainWindow : Window
     private void HideToTray()
     {
         Hide();
-        _trayIcon.ShowBalloonTip(1200, "Personal Log Manager",
-            "The app is still running in the notification area.", System.Windows.Forms.ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1200, LocalizationService.Translate("Personal Log Manager"),
+            LocalizationService.Translate("The app is still running in the notification area."),
+            System.Windows.Forms.ToolTipIcon.Info);
     }
 
     private void OnReminderRequested(object? sender, EventArgs e)
     {
         ShowDashboard();
-        _notifications.Show("Work Log Reminder", "It is time to record today's work.");
+        _notifications.Show(LocalizationService.Translate("Work Log Reminder"),
+            LocalizationService.Translate("Time to record your work today."));
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        _trayIcon.Text = LocalizationService.Translate("Personal Log Manager");
+        var menu = _trayIcon.ContextMenuStrip;
+        _trayIcon.ContextMenuStrip = CreateTrayMenu();
+        menu?.Dispose();
     }
 
     private void OnNotificationRequested(object? sender, NotificationEventArgs e)
@@ -124,6 +136,7 @@ public partial class MainWindow : Window
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
         _viewModel.ReminderRequested -= OnReminderRequested;
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
         if (_notifications is NotificationService notificationService)
             notificationService.NotificationRequested -= OnNotificationRequested;
         Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
@@ -138,11 +151,19 @@ public partial class MainWindow : Window
     private async void History_DoubleClick(object sender, MouseButtonEventArgs e) =>
         await _viewModel.OpenSelectedLogCommand.ExecuteAsync(null);
 
+    private void QuickAdd_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.PrepareQuickAdd();
+        new QuickAddWindow(_viewModel) { Owner = this }.ShowDialog();
+    }
+
     private async void DeleteSelected_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.SelectedLog is null) return;
-        var result = System.Windows.MessageBox.Show($"Delete '{_viewModel.SelectedLog.Title}'?",
-            "Delete log", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        var result = System.Windows.MessageBox.Show(
+            string.Format(LocalizationService.Instance.CurrentCulture,
+                LocalizationService.Translate("Delete '{0}'?"), _viewModel.SelectedLog.Title),
+            LocalizationService.Translate("Delete log"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result == MessageBoxResult.Yes) await _viewModel.DeleteLogCommand.ExecuteAsync(null);
     }
 
@@ -163,8 +184,9 @@ public partial class MainWindow : Window
     {
         if (format == "Excel" && _viewModel.ExportCategory != "WORK")
         {
-            System.Windows.MessageBox.Show("Weekly Excel reports are available for the WORK category.",
-                "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Windows.MessageBox.Show(LocalizationService.Translate(
+                    "Weekly Excel reports are available for the WORK category."),
+                LocalizationService.Translate("Export"), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var query = _viewModel.GetExportQuery();
@@ -238,8 +260,9 @@ public partial class MainWindow : Window
     {
         if (_viewModel.SelectedCategory?.Name != "LETTER")
         {
-            System.Windows.MessageBox.Show("Choose the LETTER category to export a letter.",
-                "Personal Log Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Windows.MessageBox.Show(LocalizationService.Translate(
+                    "Choose the LETTER category to export a letter."),
+                LocalizationService.Translate("Personal Log Manager"), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         var extension = markdown ? "md" : "txt";
@@ -259,8 +282,9 @@ public partial class MainWindow : Window
     {
         if (_viewModel.SelectedCategory?.Name != "LETTER")
         {
-            System.Windows.MessageBox.Show("Choose the LETTER category to preview a letter.",
-                "Personal Log Manager", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Windows.MessageBox.Show(LocalizationService.Translate(
+                    "Choose the LETTER category to preview a letter."),
+                LocalizationService.Translate("Personal Log Manager"), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         new LetterPreviewWindow(_viewModel.Title,
@@ -296,15 +320,18 @@ public partial class MainWindow : Window
         try { await _viewModel.CreateCategoryAsync(dialog.CategoryName, dialog.CategoryIcon, dialog.ColorHex); }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(ex.Message, "Category", MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show(LocalizationService.TranslateException(ex),
+                LocalizationService.Translate("Category"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
     private async void DeleteTag_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.SelectedTag is null) return;
-        var result = System.Windows.MessageBox.Show($"Delete tag '{_viewModel.SelectedTag.Name}'?",
-            "Delete tag", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        var result = System.Windows.MessageBox.Show(string.Format(LocalizationService.Instance.CurrentCulture,
+                LocalizationService.Translate("Delete tag '{0}'?"), _viewModel.SelectedTag.Name),
+            LocalizationService.Translate("Delete tag"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result == MessageBoxResult.Yes) await _viewModel.DeleteTagCommand.ExecuteAsync(null);
     }
 
@@ -313,12 +340,14 @@ public partial class MainWindow : Window
         try
         {
             await export();
-            System.Windows.MessageBox.Show("Export completed successfully.", "Personal Log Manager",
+            System.Windows.MessageBox.Show(LocalizationService.Translate("Export completed successfully."),
+                LocalizationService.Translate("Personal Log Manager"),
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Export failed.\n\n{ex.Message}", "Personal Log Manager",
+            System.Windows.MessageBox.Show($"{LocalizationService.Translate("Export failed.")}\n\n{LocalizationService.TranslateException(ex)}",
+                LocalizationService.Translate("Personal Log Manager"),
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -335,7 +364,10 @@ public partial class MainWindow : Window
 
 internal sealed class CategoryDialog : Window
 {
-    private readonly System.Windows.Controls.TextBox _name = new() { MinWidth = 280, AcceptsReturn = false, Text = "New category" };
+    private readonly System.Windows.Controls.TextBox _name = new()
+    {
+        MinWidth = 280, AcceptsReturn = false, Text = LocalizationService.Translate("New category")
+    };
     private readonly System.Windows.Controls.TextBox _icon = new() { MinWidth = 280, AcceptsReturn = false, Text = "●" };
     private readonly System.Windows.Controls.TextBox _color = new() { MinWidth = 280, AcceptsReturn = false, Text = "#315C4C" };
     public string CategoryName => _name.Text.Trim();
@@ -344,15 +376,15 @@ internal sealed class CategoryDialog : Window
 
     public CategoryDialog()
     {
-    Title = "Create custom category";
+    Title = LocalizationService.Translate("Create custom category");
     WindowStartupLocation = WindowStartupLocation.CenterOwner;
     Owner = System.Windows.Application.Current.MainWindow;
     SizeToContent = SizeToContent.WidthAndHeight;
     ResizeMode = ResizeMode.NoResize;
     var stack = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) };
-    AddField(stack, "Name", _name);
-    AddField(stack, "Icon", _icon);
-    AddField(stack, "Color (hex)", _color);
+    AddField(stack, LocalizationService.Translate("Name"), _name);
+    AddField(stack, LocalizationService.Translate("Icon"), _icon);
+    AddField(stack, LocalizationService.Translate("Color (hex)"), _color);
     var buttons = new System.Windows.Controls.StackPanel
     {
         Orientation = System.Windows.Controls.Orientation.Horizontal,
@@ -360,13 +392,13 @@ internal sealed class CategoryDialog : Window
     };
     var create = new System.Windows.Controls.Button
     {
-        Content = "Create", IsDefault = true, MinWidth = 80, Margin = new Thickness(4)
+        Content = LocalizationService.Translate("Create"), IsDefault = true, MinWidth = 80, Margin = new Thickness(4)
     };
     create.Click += (_, _) => DialogResult = !string.IsNullOrWhiteSpace(CategoryName);
     buttons.Children.Add(create);
     buttons.Children.Add(new System.Windows.Controls.Button
     {
-        Content = "Cancel", IsCancel = true, MinWidth = 80, Margin = new Thickness(4)
+        Content = LocalizationService.Translate("Cancel"), IsCancel = true, MinWidth = 80, Margin = new Thickness(4)
     });
     stack.Children.Add(buttons);
     Content = stack;
@@ -384,7 +416,8 @@ internal sealed class LetterPreviewWindow : Window
 {
     public LetterPreviewWindow(string title, string text)
     {
-        Title = string.IsNullOrWhiteSpace(title) ? "Letter preview" : $"Preview — {title}";
+        Title = string.IsNullOrWhiteSpace(title) ? LocalizationService.Translate("Letter preview") :
+            $"{LocalizationService.Translate("Preview")} — {title}";
         Width = 760;
         Height = 650;
         MinWidth = 560;

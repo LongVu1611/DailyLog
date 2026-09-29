@@ -1,3 +1,5 @@
+using DailyLogAssistant.Localization;
+
 namespace DailyLogAssistant.Models;
 
 public sealed class LogEntry
@@ -27,6 +29,7 @@ public sealed class LogEntry
     public IReadOnlyList<string> Tags => LogTags.Select(link => link.Tag?.Name)
         .Where(name => name is not null).Cast<string>().ToArray();
     public string TagsSummary => string.Join(", ", Tags);
+    public string StatusDisplay => LocalizationService.Translate(Status);
     public string DisplayContent => string.Join(Environment.NewLine,
         new[] { Project, Result, Problems, Body, Content, Notes }.Where(value => !string.IsNullOrWhiteSpace(value)));
 }
@@ -38,7 +41,7 @@ public sealed class LogCategory
     public string Icon { get; set; } = "●";
     public string Color { get; set; } = "#315C4C";
     public bool IsBuiltIn { get; set; }
-    public string DisplayName => $"{Icon}  {Name}";
+    public string DisplayName => $"{Icon}  {LocalizationService.Translate(Name)}";
     public List<LogEntry> Logs { get; set; } = [];
 }
 

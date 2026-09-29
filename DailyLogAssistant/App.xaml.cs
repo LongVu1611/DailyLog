@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Threading;
 using System.Windows;
 using DailyLogAssistant.Data;
+using DailyLogAssistant.Localization;
 using DailyLogAssistant.Services;
 using DailyLogAssistant.ViewModels;
 using DailyLogAssistant.Views;
@@ -86,6 +87,7 @@ public partial class App : System.Windows.Application
             }
             var settingsService = _host.Services.GetRequiredService<SettingsService>();
             var appSettings = await settingsService.GetAsync();
+            LocalizationService.SetLanguage(appSettings.Language);
             if (string.IsNullOrWhiteSpace(appSettings.WorkReportTemplatePath))
             {
                 appSettings.WorkReportTemplatePath = templatePath;
@@ -109,8 +111,9 @@ public partial class App : System.Windows.Application
         catch (Exception exception)
         {
             Log.Error(exception, "Application startup failed");
-            System.Windows.MessageBox.Show($"Personal Log Manager could not start.\n\n{exception.Message}",
-                "Personal Log Manager", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show(string.Format(LocalizationService.Instance.CurrentCulture,
+                    LocalizationService.Translate("Personal Log Manager could not start.\n\n{0}"), exception.Message),
+                LocalizationService.Translate("Personal Log Manager"), MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }
@@ -118,9 +121,10 @@ public partial class App : System.Windows.Application
     private void HandleDispatcherException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Log.Error(e.Exception, "UnhandledException");
-        System.Windows.MessageBox.Show(
-            $"An unexpected error occurred. Your saved logs are safe.\n\n{e.Exception.Message}",
-            "Personal Log Manager", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show(string.Format(LocalizationService.Instance.CurrentCulture,
+                LocalizationService.Translate("An unexpected error occurred. Your saved logs are safe.\n\n{0}"),
+                e.Exception.Message),
+            LocalizationService.Translate("Personal Log Manager"), MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }
 

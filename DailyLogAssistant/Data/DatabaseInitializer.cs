@@ -24,6 +24,7 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory)
                 "SnoozeUntil" TEXT NULL,
                 "Theme" TEXT NOT NULL DEFAULT 'System',
                 "AccentColor" TEXT NOT NULL DEFAULT '#315C4C',
+                "Language" TEXT NOT NULL DEFAULT 'English',
                 "WorkReportTemplatePath" TEXT NOT NULL DEFAULT ''
             );
             CREATE TABLE IF NOT EXISTS "Categories" (
@@ -58,6 +59,11 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory)
             );
             CREATE INDEX IF NOT EXISTS "IX_LogTags_TagId" ON "LogTags" ("TagId");
             """, cancellationToken);
+
+        if (!await SettingsColumnExistsAsync(db, "Language", cancellationToken))
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "AppSettings" ADD COLUMN "Language" TEXT NOT NULL DEFAULT 'English'""",
+                cancellationToken);
 
         foreach (var category in BuiltInCategories.All)
         {
@@ -113,6 +119,22 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory)
         if (command.Connection?.State != System.Data.ConnectionState.Open)
             await db.Database.OpenConnectionAsync(cancellationToken);
         return await command.ExecuteScalarAsync(cancellationToken) is not null;
+    }
+
+    private static async Task<bool> SettingsColumnExistsAsync(
+        AppDbContext db, string columnName, CancellationToken cancellationToken)
+    {
+        await using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = """PRAGMA table_info("AppSettings")""";
+        if (command.Connection?.State != System.Data.ConnectionState.Open)
+            await db.Database.OpenConnectionAsync(cancellationToken);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 }
 

@@ -2,32 +2,40 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:loc="clr-namespace:DailyLogAssistant.Localization"
         PreviewKeyDown="Window_PreviewKeyDown"
-        Title="Personal Log Manager" Height="820" Width="1280"
+        Title="{loc:Translate 'Personal Log Manager'}" Height="820" Width="1280"
         MinHeight="680" MinWidth="980" Background="{DynamicResource AppBackgroundBrush}"
+        Language="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=CurrentXmlLanguage}"
         WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <Style TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+    </Style>
+  </Window.Resources>
   <Grid Margin="18">
     <Grid.ColumnDefinitions><ColumnDefinition Width="205"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <Border Grid.Column="0" Background="#263C34" CornerRadius="14" Padding="12" Margin="0,0,16,0">
       <DockPanel>
-        <TextBlock DockPanel.Dock="Top" Text="PERSONAL LOGS" Foreground="White" FontSize="19"
+        <TextBlock DockPanel.Dock="Top" Text="{loc:Translate 'PERSONAL LOGS'}" Foreground="White" FontSize="19"
                    FontWeight="SemiBold" Margin="6,8,4,18"/>
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Foreground="#C9D7D0"
                    TextWrapping="Wrap" Margin="5,12,5,6"/>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <Button Content="Dashboard" Command="{Binding NavigateCommand}" CommandParameter="Dashboard"/>
-            <Button Content="Work  +" Command="{Binding NewWorkCommand}"/>
-            <Button Content="Personal  +" Command="{Binding NewPersonalCommand}"/>
-            <Button Content="Letters  +" Command="{Binding NewLetterCommand}"/>
-            <Button Content="Notes  +" Command="{Binding NewNoteCommand}"/>
-            <Button Content="Tags" Command="{Binding NavigateCommand}" CommandParameter="Tags"/>
-            <Button Content="History" Command="{Binding NavigateCommand}" CommandParameter="History"/>
-            <Button Content="Export" Command="{Binding NavigateCommand}" CommandParameter="Export"/>
-            <Button Content="Statistics" Command="{Binding NavigateCommand}" CommandParameter="Statistics"/>
-            <Button Content="Settings" Command="{Binding NavigateCommand}" CommandParameter="Settings"/>
+            <Button Content="{loc:Translate Dashboard}" Command="{Binding NavigateCommand}" CommandParameter="Dashboard"/>
+            <Button Content="{loc:Translate 'Work  +'}" Command="{Binding NewWorkCommand}"/>
+            <Button Content="{loc:Translate 'Personal  +'}" Command="{Binding NewPersonalCommand}"/>
+            <Button Content="{loc:Translate 'Letters  +'}" Command="{Binding NewLetterCommand}"/>
+            <Button Content="{loc:Translate 'Notes  +'}" Command="{Binding NewNoteCommand}"/>
+            <Button Content="{loc:Translate Tags}" Command="{Binding NavigateCommand}" CommandParameter="Tags"/>
+            <Button Content="{loc:Translate Calendar}" Command="{Binding NavigateCommand}" CommandParameter="Calendar"/>
+            <Button Content="{loc:Translate History}" Command="{Binding NavigateCommand}" CommandParameter="History"/>
+            <Button Content="{loc:Translate Export}" Command="{Binding NavigateCommand}" CommandParameter="Export"/>
+            <Button Content="{loc:Translate Statistics}" Command="{Binding NavigateCommand}" CommandParameter="Statistics"/>
+            <Button Content="{loc:Translate Settings}" Command="{Binding NavigateCommand}" CommandParameter="Settings"/>
             <Separator Margin="4,8"/>
-            <TextBlock Text="CUSTOM CATEGORIES" Foreground="#B8C8C0" FontSize="11" Margin="7,4"/>
+            <TextBlock Text="{loc:Translate 'CUSTOM CATEGORIES'}" Foreground="#B8C8C0" FontSize="11" Margin="7,4"/>
             <ItemsControl ItemsSource="{Binding Categories}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -36,7 +44,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Button Content="+ Add custom category" Click="AddCategory_Click"/>
+            <Button Content="{loc:Translate '+ Add custom category'}" Click="AddCategory_Click"/>
           </StackPanel>
         </ScrollViewer>
       </DockPanel>
@@ -44,24 +52,37 @@
     <Grid Grid.Column="1">
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
       <DockPanel Grid.Row="0" Margin="2,0,0,12">
-        <TextBlock Text="{Binding TodayText}" FontSize="16" Foreground="#59645E" VerticalAlignment="Center"/>
-        <Button DockPanel.Dock="Right" Content="New work log" Command="{Binding NewWorkCommand}"/>
+        <TextBlock Text="{Binding TodayText}" FontSize="16"
+                   Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+        <Button DockPanel.Dock="Right" Content="{loc:Translate 'Quick add'}" Click="QuickAdd_Click"/>
       </DockPanel>
-      <TabControl Grid.Row="1" SelectedValue="{Binding ActiveSection}" SelectedValuePath="Header"
+      <TabControl Grid.Row="1" SelectedValue="{Binding ActiveSection}" SelectedValuePath="Tag"
                   Background="{DynamicResource AppBackgroundBrush}" BorderThickness="0">
-        <TabItem Header="Dashboard" Padding="0">
+        <TabItem Header="{loc:Translate Dashboard}" Tag="Dashboard" Padding="0">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="12">
-              <TextBlock Text="Your day, in review." FontSize="31" FontWeight="SemiBold"
-                         Foreground="{DynamicResource PrimaryTextBrush}"/>
-              <TextBlock Text="{Binding TodayStatus}" FontSize="18" Margin="0,9,0,14"/>
-              <UniformGrid Columns="4" Margin="0,0,0,18">
-                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="15" Margin="4"><StackPanel><TextBlock Text="TOTAL LOGS"/><TextBlock Text="{Binding Statistics.Total}" FontSize="28" FontWeight="SemiBold"/></StackPanel></Border>
-                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="15" Margin="4"><StackPanel><TextBlock Text="WORK STREAK"/><TextBlock Text="{Binding Statistics.CurrentStreak}" FontSize="28" FontWeight="SemiBold"/></StackPanel></Border>
-                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="15" Margin="4"><StackPanel><TextBlock Text="THIS MONTH"/><TextBlock Text="{Binding Statistics.ThisMonth}" FontSize="28" FontWeight="SemiBold"/></StackPanel></Border>
-                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="15" Margin="4"><StackPanel><TextBlock Text="THIS YEAR"/><TextBlock Text="{Binding CategoryStatistics.ThisYear}" FontSize="28" FontWeight="SemiBold"/></StackPanel></Border>
+              <DockPanel Margin="0,0,0,10">
+                <StackPanel>
+                  <TextBlock Text="{loc:Translate 'Your day in review'}" FontSize="31" FontWeight="SemiBold"
+                             Foreground="{DynamicResource PrimaryTextBrush}"/>
+                  <TextBlock Text="{Binding TodayText}" Foreground="#59645E" Margin="0,3"/>
+                </StackPanel>
+                <Button DockPanel.Dock="Right" Content="{loc:Translate '＋ Quick add'}" Click="QuickAdd_Click"
+                        VerticalAlignment="Center" Padding="16,10"/>
+              </DockPanel>
+              <TextBlock Text="{Binding TodayStatus}" FontSize="18" Margin="0,4,0,12"/>
+              <UniformGrid Columns="3" Margin="0,0,0,18">
+                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="15" Margin="4">
+                  <StackPanel><TextBlock Text="{loc:Translate 'LOGS TODAY'}"/><TextBlock Text="{Binding TodayLogCount}" FontSize="28" FontWeight="SemiBold"/></StackPanel>
+                </Border>
+                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="15" Margin="4">
+                  <StackPanel><TextBlock Text="{loc:Translate 'WORK THIS WEEK'}"/><TextBlock Text="{Binding WeeklyWorkSummary}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/></StackPanel>
+                </Border>
+                <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="15" Margin="4">
+                  <StackPanel><TextBlock Text="{loc:Translate 'WORK STREAK'}"/><TextBlock Text="{Binding Statistics.CurrentStreak}" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="{loc:Translate days}"/></StackPanel>
+                </Border>
               </UniformGrid>
-              <TextBlock Text="Today's work" FontSize="19" FontWeight="SemiBold"/>
+              <TextBlock Text="{loc:Translate 'Work today'}" FontSize="19" FontWeight="SemiBold"/>
               <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="16" Margin="0,7,0,12">
                 <StackPanel>
                   <TextBlock Text="{Binding WorkCompletionText}" FontWeight="SemiBold"/>
@@ -69,186 +90,293 @@
                   <TextBlock Text="{Binding ReminderTimeText}" Foreground="#59645E"/>
                 </StackPanel>
               </Border>
-              <TextBlock Text="Recent logs" FontSize="19" FontWeight="SemiBold" Margin="0,0,0,6"/>
-              <ListView ItemsSource="{Binding History}" SelectedItem="{Binding SelectedLog}" MaxHeight="250" MouseDoubleClick="History_DoubleClick">
+              <TextBlock Text="{loc:Translate 'Recent logs'}" FontSize="19" FontWeight="SemiBold" Margin="0,0,0,6"/>
+              <TextBlock Text="{loc:Translate 'No logs yet. Use Quick add to capture your first entry.'}"
+                         Foreground="{DynamicResource PrimaryTextBrush}" Margin="4,8">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding RecentLogs.Count}" Value="0">
+                        <Setter Property="Visibility" Value="Visible"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <ListView ItemsSource="{Binding RecentLogs}" SelectedItem="{Binding SelectedLog}"
+                        Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}"
+                        MaxHeight="250" MouseDoubleClick="History_DoubleClick">
                 <ListView.View><GridView>
-                  <GridViewColumn Header="Date" Width="115" DisplayMemberBinding="{Binding Date}"/>
-                  <GridViewColumn Header="Category" Width="100" DisplayMemberBinding="{Binding Category.Name}"/>
-                  <GridViewColumn Header="Title" Width="340" DisplayMemberBinding="{Binding Title}"/>
-                  <GridViewColumn Header="Status" Width="110" DisplayMemberBinding="{Binding Status}"/>
+                  <GridViewColumn Header="{loc:Translate Date}" Width="115" DisplayMemberBinding="{Binding Date}"/>
+                  <GridViewColumn Header="{loc:Translate Category}" Width="100" DisplayMemberBinding="{Binding Category.DisplayName}"/>
+                  <GridViewColumn Header="{loc:Translate Title}" Width="340" DisplayMemberBinding="{Binding Title}"/>
+                  <GridViewColumn Header="{loc:Translate Status}" Width="110" DisplayMemberBinding="{Binding StatusDisplay}"/>
                 </GridView></ListView.View>
               </ListView>
               <WrapPanel Margin="0,10">
-                <Button Content="Work log" Command="{Binding NewWorkCommand}"/>
-                <Button Content="Personal log" Command="{Binding NewPersonalCommand}"/>
-                <Button Content="Letter" Command="{Binding NewLetterCommand}"/>
-                <Button Content="Note" Command="{Binding NewNoteCommand}"/>
-                <Button Content="Export weekly report" Click="ExportWeekly_Click"/>
+                <Button Content="{loc:Translate 'Open selected log'}" Command="{Binding OpenSelectedLogCommand}"/>
+                <Button Content="{loc:Translate 'Export weekly report'}" Click="ExportWeekly_Click"/>
               </WrapPanel>
             </StackPanel>
           </ScrollViewer>
         </TabItem>
-        <TabItem Header="Editor">
+        <TabItem Header="{loc:Translate Calendar}" Tag="Calendar">
+          <Grid Margin="14">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <DockPanel Grid.Row="0" Margin="0,0,0,10">
+              <TextBlock Text="{Binding CalendarMonthText}" FontSize="27" FontWeight="SemiBold"
+                         Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="{loc:Translate Today}" Command="{Binding CurrentCalendarMonthCommand}"/>
+                <Button Content="{loc:Translate '‹'}" Command="{Binding PreviousCalendarMonthCommand}" ToolTip="{loc:Translate 'Previous month'}"/>
+                <Button Content="{loc:Translate '›'}" Command="{Binding NextCalendarMonthCommand}" ToolTip="{loc:Translate 'Next month'}"/>
+              </StackPanel>
+            </DockPanel>
+            <StackPanel Grid.Row="1">
+              <UniformGrid Columns="7" Margin="0,0,0,2">
+                <TextBlock Text="{loc:Translate Mon}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{loc:Translate Tue}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{loc:Translate Wed}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{loc:Translate Thu}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{loc:Translate Fri}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{loc:Translate Sat}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{loc:Translate Sun}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+              </UniformGrid>
+              <ItemsControl ItemsSource="{Binding CalendarDays}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><UniformGrid Columns="7"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Command="{Binding DataContext.SelectCalendarDayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}" ToolTip="{Binding ToolTip}" Height="58"
+                            Padding="3" Margin="2">
+                      <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                          <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                          <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                          <Setter Property="MinHeight" Value="0"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                              <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                              <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsInDisplayedMonth}" Value="False">
+                              <Setter Property="IsEnabled" Value="False"/>
+                              <Setter Property="Opacity" Value="0.45"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Button.Style>
+                      <StackPanel>
+                        <TextBlock Text="{Binding DayNumber}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding MarkerText}" Foreground="{Binding MarkerColor}"
+                                   HorizontalAlignment="Center" FontSize="10"/>
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <Grid Grid.Row="2" Margin="0,12,0,0">
+              <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+              <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                <TextBlock Text="{Binding SelectedCalendarDateText}" FontSize="18" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                <Button Content="{loc:Translate 'Edit selected'}" Command="{Binding OpenSelectedLogCommand}"
+                        Margin="12,0,0,0" Padding="10,5"/>
+              </StackPanel>
+              <Grid Grid.Row="1">
+                <TextBlock Text="{loc:Translate 'No logs for this day.'}" Foreground="{DynamicResource PrimaryTextBrush}" Margin="4,8"
+                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding CalendarEntries.Count}" Value="0">
+                        <Setter Property="Visibility" Value="Visible"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+                <ListView ItemsSource="{Binding CalendarEntries}" SelectedItem="{Binding SelectedLog}"
+                          Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}"
+                          MouseDoubleClick="History_DoubleClick">
+                  <ListView.View><GridView>
+                    <GridViewColumn Header="{loc:Translate Type}" Width="110" DisplayMemberBinding="{Binding Category.DisplayName}"/>
+                    <GridViewColumn Header="{loc:Translate Title}" Width="300" DisplayMemberBinding="{Binding Title}"/>
+                    <GridViewColumn Header="{loc:Translate Status}" Width="110" DisplayMemberBinding="{Binding StatusDisplay}"/>
+                  </GridView></ListView.View>
+                </ListView>
+              </Grid>
+            </Grid>
+          </Grid>
+        </TabItem>
+        <TabItem Header="{loc:Translate 'Log entry'}" Tag="Editor">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="18" MaxWidth="850" HorizontalAlignment="Left">
               <DockPanel Margin="0,0,0,8">
-                <TextBlock Text="Log entry" FontSize="29" FontWeight="SemiBold"
+                <TextBlock Text="{loc:Translate 'Log entry'}" FontSize="29" FontWeight="SemiBold"
                            Foreground="{DynamicResource PrimaryTextBrush}"/>
                 <WrapPanel DockPanel.Dock="Right">
-                  <Button Content="Preview letter" Click="PreviewLetter_Click"/>
-                  <Button Content="Export letter TXT" Click="ExportLetterTxt_Click"/>
-                  <Button Content="Export letter Markdown" Click="ExportLetterMarkdown_Click"/>
+                  <Button Content="{loc:Translate 'Preview letter'}" Click="PreviewLetter_Click"/>
+                  <Button Content="{loc:Translate 'Export letter TXT'}" Click="ExportLetterTxt_Click"/>
+                  <Button Content="{loc:Translate 'Export letter Markdown'}" Click="ExportLetterMarkdown_Click"/>
                 </WrapPanel>
               </DockPanel>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                  <TextBlock Text="Category"/><ComboBox ItemsSource="{Binding Categories}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedCategory}"/>
+                  <TextBlock Text="{loc:Translate Category}"/><ComboBox ItemsSource="{Binding Categories}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedCategory}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1">
-                  <TextBlock Text="Date"/><DatePicker SelectedDate="{Binding SelectedDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/>
+                  <TextBlock Text="{loc:Translate Date}"/><DatePicker SelectedDate="{Binding SelectedDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/>
                 </StackPanel>
               </Grid>
-              <TextBlock Text="Title / Task"/><TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="False" MinHeight="36"/>
+              <TextBlock Text="{loc:Translate 'Title / Task'}"/><TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="False" MinHeight="36"/>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Margin="0,0,10,0"><TextBlock Text="Project"/><TextBox Text="{Binding Project}"/></StackPanel>
-                <StackPanel Grid.Column="1"><TextBlock Text="Status"/><ComboBox ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding Status}"/></StackPanel>
+                <StackPanel Grid.Column="0" Margin="0,0,10,0"><TextBlock Text="{loc:Translate Project}"/><TextBox Text="{Binding Project}"/></StackPanel>
+                <StackPanel Grid.Column="1"><TextBlock Text="{loc:Translate Status}"/><ComboBox ItemsSource="{Binding StatusOptions}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding Status}"/></StackPanel>
               </Grid>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Margin="0,0,10,0"><TextBlock Text="Person / recipient"/><TextBox Text="{Binding Recipient}"/></StackPanel>
-                <StackPanel Grid.Column="1"><TextBlock Text="Mood"/><TextBox Text="{Binding Mood}"/></StackPanel>
+                <StackPanel Grid.Column="0" Margin="0,0,10,0"><TextBlock Text="{loc:Translate 'Person / recipient'}"/><TextBox Text="{Binding Recipient}"/></StackPanel>
+                <StackPanel Grid.Column="1"><TextBlock Text="{loc:Translate Mood}"/><TextBox Text="{Binding Mood}"/></StackPanel>
               </Grid>
-              <TextBlock Text="Opening"/><TextBox Text="{Binding Opening}" Height="58"/>
-              <TextBlock Text="Body / content"/><TextBox Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}" Height="205"/>
-              <TextBlock Text="Closing"/><TextBox Text="{Binding Closing}" Height="58"/>
-              <TextBlock Text="Signature"/><TextBox Text="{Binding Signature}" AcceptsReturn="False"/>
-              <TextBlock Text="Things to remember"/><TextBox Text="{Binding ThingsToRemember}" Height="65"/>
-              <TextBlock Text="Result"/><TextBox Text="{Binding Result}" Height="65"/>
-              <TextBlock Text="Problems / blockers"/><TextBox Text="{Binding Problems}" Height="65"/>
-              <TextBlock Text="Notes"/><TextBox Text="{Binding Notes}" Height="65"/>
-              <TextBlock Text="Tags (comma-separated)"/><TextBox Text="{Binding TagsText}" AcceptsReturn="False"/>
+              <TextBlock Text="{loc:Translate Opening}"/><TextBox Text="{Binding Opening}" Height="58"/>
+              <TextBlock Text="{loc:Translate 'Body / content'}"/><TextBox Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}" Height="205"/>
+              <TextBlock Text="{loc:Translate Closing}"/><TextBox Text="{Binding Closing}" Height="58"/>
+              <TextBlock Text="{loc:Translate Signature}"/><TextBox Text="{Binding Signature}" AcceptsReturn="False"/>
+              <TextBlock Text="{loc:Translate 'Things to remember'}"/><TextBox Text="{Binding ThingsToRemember}" Height="65"/>
+              <TextBlock Text="{loc:Translate Result}"/><TextBox Text="{Binding Result}" Height="65"/>
+              <TextBlock Text="{loc:Translate 'Problems / blockers'}"/><TextBox Text="{Binding Problems}" Height="65"/>
+              <TextBlock Text="{loc:Translate Notes}"/><TextBox Text="{Binding Notes}" Height="65"/>
+              <TextBlock Text="{loc:Translate 'Tags separated by commas'}"/><TextBox Text="{Binding TagsText}" AcceptsReturn="False"/>
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Snooze 15 min" Command="{Binding SnoozeCommand}" CommandParameter="15" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                <Button Content="Snooze 30 min" Command="{Binding SnoozeCommand}" CommandParameter="30" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                <Button Content="Snooze 1 hour" Command="{Binding SnoozeCommand}" CommandParameter="60" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                <Button Content="Dismiss today" Command="{Binding DismissReminderCommand}" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                <Button Content="Save log" Command="{Binding SaveLogCommand}" IsDefault="True"/>
+                <Button Content="{loc:Translate 'Snooze 15 min'}" Command="{Binding SnoozeCommand}" CommandParameter="15" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <Button Content="{loc:Translate 'Snooze 30 min'}" Command="{Binding SnoozeCommand}" CommandParameter="30" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <Button Content="{loc:Translate 'Snooze 1 hour'}" Command="{Binding SnoozeCommand}" CommandParameter="60" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <Button Content="{loc:Translate 'Dismiss today'}" Command="{Binding DismissReminderCommand}" Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <Button Content="{loc:Translate 'Save log'}" Command="{Binding SaveLogCommand}" IsDefault="True"/>
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </TabItem>
-        <TabItem Header="Tags">
+        <TabItem Header="{loc:Translate Tags}" Tag="Tags">
           <Grid Margin="18">
             <Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0">
-              <TextBlock Text="Tags" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,12"/>
+              <TextBlock Text="{loc:Translate Tags}" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,12"/>
               <ListBox ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" DisplayMemberPath="Name"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Margin="22,0,0,0" MaxWidth="440" HorizontalAlignment="Left">
-              <TextBlock Text="Create or rename tag" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
-              <TextBlock Text="Name"/><TextBox Text="{Binding TagName}"/>
-              <TextBlock Text="Color (hex)"/><TextBox Text="{Binding TagColor}" AcceptsReturn="False"/>
-              <WrapPanel><Button Content="Save tag" Command="{Binding SaveTagCommand}"/><Button Content="Delete selected" Click="DeleteTag_Click"/></WrapPanel>
+              <TextBlock Text="{loc:Translate 'Create or rename tag'}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
+              <TextBlock Text="{loc:Translate Name}"/><TextBox Text="{Binding TagName}"/>
+              <TextBlock Text="{loc:Translate 'Color (hex)'}"/><TextBox Text="{Binding TagColor}" AcceptsReturn="False"/>
+              <WrapPanel><Button Content="{loc:Translate 'Save tag'}" Command="{Binding SaveTagCommand}"/><Button Content="{loc:Translate 'Delete selected'}" Click="DeleteTag_Click"/></WrapPanel>
             </StackPanel>
           </Grid>
         </TabItem>
-        <TabItem Header="History">
+        <TabItem Header="{loc:Translate History}" Tag="History">
           <DockPanel Margin="14">
             <StackPanel DockPanel.Dock="Top">
-              <TextBlock Text="History" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,6"/>
-              <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search title, content, project, results, blockers, recipient and tags"/>
+              <TextBlock Text="{loc:Translate History}" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,6"/>
+              <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{loc:Translate 'Search logs'}"/>
               <WrapPanel>
-                <ComboBox Width="145" ItemsSource="{Binding HistoryFilters}" SelectedItem="{Binding HistoryFilter}"/>
-                <ComboBox Width="150" ItemsSource="{Binding HistoryCategoryFilters}" SelectedItem="{Binding HistoryCategoryFilter}"/>
-                <ComboBox Width="150" ItemsSource="{Binding HistoryTagFilters}" SelectedItem="{Binding HistoryTagFilter}"/>
-                <ComboBox Width="145" SelectedValuePath="Content" SelectedValue="{Binding HistoryStatusFilter}">
-                  <ComboBoxItem Content="All statuses"/>
-                  <ComboBoxItem Content="Planned"/>
-                  <ComboBoxItem Content="In Progress"/>
-                  <ComboBoxItem Content="Completed"/>
-                  <ComboBoxItem Content="Blocked"/>
-                  <ComboBoxItem Content="Cancelled"/>
-                </ComboBox>
-                <TextBlock Text="From" VerticalAlignment="Center" Margin="6,0"/><DatePicker SelectedDate="{Binding HistoryStartDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/>
-                <TextBlock Text="To" VerticalAlignment="Center" Margin="6,0"/><DatePicker SelectedDate="{Binding HistoryEndDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/>
+                <ComboBox Width="145" ItemsSource="{Binding HistoryFilters}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding HistoryFilter}"/>
+                <ComboBox Width="150" ItemsSource="{Binding HistoryCategoryFilters}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding HistoryCategoryFilter}"/>
+                <ComboBox Width="150" ItemsSource="{Binding HistoryTagFilters}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding HistoryTagFilter}"/>
+                <ComboBox Width="145" ItemsSource="{Binding HistoryStatusOptions}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding HistoryStatusFilter}"/>
+                <TextBlock Text="{loc:Translate From}" VerticalAlignment="Center" Margin="6,0"/><DatePicker SelectedDate="{Binding HistoryStartDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/>
+                <TextBlock Text="{loc:Translate To}" VerticalAlignment="Center" Margin="6,0"/><DatePicker SelectedDate="{Binding HistoryEndDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/>
               </WrapPanel>
               <WrapPanel HorizontalAlignment="Right">
-                <Button Content="Edit" Command="{Binding OpenSelectedLogCommand}"/>
-                <Button Content="Duplicate" Command="{Binding DuplicateLogCommand}"/>
-                <Button Content="Delete" Click="DeleteSelected_Click"/>
+                <Button Content="{loc:Translate Edit}" Command="{Binding OpenSelectedLogCommand}"/>
+                <Button Content="{loc:Translate Duplicate}" Command="{Binding DuplicateLogCommand}"/>
+                <Button Content="{loc:Translate Delete}" Click="DeleteSelected_Click"/>
               </WrapPanel>
             </StackPanel>
             <ListView ItemsSource="{Binding History}" SelectedItem="{Binding SelectedLog}" MouseDoubleClick="History_DoubleClick">
               <ListView.View><GridView>
-                <GridViewColumn Header="Date" Width="115" DisplayMemberBinding="{Binding Date}"/>
-                <GridViewColumn Header="Category" Width="105" DisplayMemberBinding="{Binding Category.Name}"/>
-                <GridViewColumn Header="Title" Width="260" DisplayMemberBinding="{Binding Title}"/>
-                <GridViewColumn Header="Status" Width="105" DisplayMemberBinding="{Binding Status}"/>
-                <GridViewColumn Header="Tags" Width="200" DisplayMemberBinding="{Binding TagsSummary}"/>
-                <GridViewColumn Header="Updated" Width="145" DisplayMemberBinding="{Binding UpdatedAt, StringFormat={}{0:g}}"/>
+                <GridViewColumn Header="{loc:Translate Date}" Width="115" DisplayMemberBinding="{Binding Date}"/>
+                <GridViewColumn Header="{loc:Translate Category}" Width="105" DisplayMemberBinding="{Binding Category.DisplayName}"/>
+                <GridViewColumn Header="{loc:Translate Title}" Width="260" DisplayMemberBinding="{Binding Title}"/>
+                <GridViewColumn Header="{loc:Translate Status}" Width="105" DisplayMemberBinding="{Binding StatusDisplay}"/>
+                <GridViewColumn Header="{loc:Translate Tags}" Width="200" DisplayMemberBinding="{Binding TagsSummary}"/>
+                <GridViewColumn Header="{loc:Translate Updated}" Width="145" DisplayMemberBinding="{Binding UpdatedAt, StringFormat={}{0:g}}"/>
               </GridView></ListView.View>
             </ListView>
           </DockPanel>
         </TabItem>
-        <TabItem Header="Export">
+        <TabItem Header="{loc:Translate Export}" Tag="Export">
           <StackPanel Margin="22" MaxWidth="700" HorizontalAlignment="Left">
-            <TextBlock Text="Export center" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,18"/>
-            <TextBlock Text="Category"/><ComboBox ItemsSource="{Binding ExportCategories}" SelectedItem="{Binding ExportCategory}"/>
-            <TextBlock Text="Format"/><ComboBox ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding ExportFormat}"/>
-            <TextBlock Text="Tag filter"/><ComboBox ItemsSource="{Binding HistoryTagFilters}" SelectedItem="{Binding ExportTagFilter}"/>
+            <TextBlock Text="{loc:Translate 'Export center'}" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,18"/>
+            <TextBlock Text="{loc:Translate Category}"/><ComboBox ItemsSource="{Binding ExportCategories}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding ExportCategory}"/>
+            <TextBlock Text="{loc:Translate Format}"/><ComboBox ItemsSource="{Binding ExportFormats}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding ExportFormat}"/>
+            <TextBlock Text="{loc:Translate 'Tag filter'}"/><ComboBox ItemsSource="{Binding HistoryTagFilters}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding ExportTagFilter}"/>
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="0" Margin="0,0,10,0"><TextBlock Text="Date from"/><DatePicker SelectedDate="{Binding ExportStartDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/></StackPanel>
-              <StackPanel Grid.Column="1"><TextBlock Text="Date to"/><DatePicker SelectedDate="{Binding ExportEndDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/></StackPanel>
+              <StackPanel Grid.Column="0" Margin="0,0,10,0"><TextBlock Text="{loc:Translate 'Date from'}"/><DatePicker SelectedDate="{Binding ExportStartDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="{loc:Translate 'Date to'}"/><DatePicker SelectedDate="{Binding ExportEndDate, Converter={StaticResource DateOnlyDateTimeConverter}}"/></StackPanel>
             </Grid>
-            <TextBlock Text="Excel exports a formatted weekly Work report; CSV and Markdown export filtered logs. Letter TXT export is available in the letter editor." TextWrapping="Wrap" Margin="0,8"/>
-            <WrapPanel><Button Content="Export" Click="ExportCenter_Click"/><Button Content="Weekly Work Report" Click="ExportWeekly_Click"/></WrapPanel>
+            <TextBlock Text="{loc:Translate 'Excel exports a formatted weekly Work report; CSV and Markdown export filtered logs. Letter TXT export is available in the letter editor.'}" TextWrapping="Wrap" Margin="0,8"/>
+            <WrapPanel><Button Content="{loc:Translate Export}" Click="ExportCenter_Click"/><Button Content="{loc:Translate 'Weekly Work Report'}" Click="ExportWeekly_Click"/></WrapPanel>
           </StackPanel>
         </TabItem>
-        <TabItem Header="Statistics">
+        <TabItem Header="{loc:Translate Statistics}" Tag="Statistics">
           <StackPanel Margin="24">
-            <TextBlock Text="Statistics" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,18"/>
-            <TextBlock Text="{Binding Statistics.Total, StringFormat='Total logs: {0}'}" FontSize="19" Margin="0,6"/>
-            <TextBlock Text="{Binding Statistics.CurrentStreak, StringFormat='Current work streak: {0} days'}" FontSize="19" Margin="0,6"/>
-            <TextBlock Text="{Binding Statistics.LongestStreak, StringFormat='Longest streak: {0} days'}" FontSize="19" Margin="0,6"/>
-            <TextBlock Text="{Binding Statistics.ThisMonth, StringFormat='Logs this month: {0}'}" FontSize="19" Margin="0,6"/>
-            <TextBlock Text="{Binding Statistics.CompletionRate, StringFormat='Work completion rate: {0}%'}" FontSize="19" Margin="0,6"/>
+            <TextBlock Text="{loc:Translate Statistics}" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,18"/>
+            <TextBlock Text="{Binding TotalLogsText}" FontSize="19" Margin="0,6"/>
+            <TextBlock Text="{Binding CurrentStreakText}" FontSize="19" Margin="0,6"/>
+            <TextBlock Text="{Binding LongestStreakText}" FontSize="19" Margin="0,6"/>
+            <TextBlock Text="{Binding ThisMonthLogsText}" FontSize="19" Margin="0,6"/>
+            <TextBlock Text="{Binding WorkCompletionRateText}" FontSize="19" Margin="0,6"/>
             <TextBlock Text="{Binding CategorySummary}" TextWrapping="Wrap" FontSize="16" Margin="0,14,0,6"/>
-            <TextBlock Text="{Binding CategoryStatistics.ThisYear, StringFormat='Logs this year: {0}'}" FontSize="19" Margin="0,6"/>
+            <TextBlock Text="{Binding ThisYearLogsText}" FontSize="19" Margin="0,6"/>
           </StackPanel>
         </TabItem>
-        <TabItem Header="Settings">
-          <StackPanel Margin="22" MaxWidth="620" HorizontalAlignment="Left">
-            <TextBlock Text="Settings" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,18"/>
-            <TextBlock Text="Work reminder time (local, 24-hour)"/><TextBox Text="{Binding Settings.ReminderTime}" AcceptsReturn="False"/>
-            <CheckBox Content="Enable daily work reminder" IsChecked="{Binding Settings.ReminderEnabled}" Margin="4,7"/>
-            <CheckBox Content="Start application with Windows" IsChecked="{Binding Settings.StartWithWindows}" Margin="4,7"/>
-            <CheckBox Content="Minimize to tray" IsChecked="{Binding Settings.MinimizeToTray}" Margin="4,7"/>
-            <CheckBox Content="Launch log editor automatically" IsChecked="{Binding Settings.LaunchLogAutomatically}" Margin="4,7"/>
-            <CheckBox Content="Show Windows notification" IsChecked="{Binding Settings.ShowNotification}" Margin="4,7"/>
-            <TextBlock Text="Theme"/><ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding Settings.Theme}"/>
-            <TextBlock Text="Accent color"/><ComboBox ItemsSource="{Binding AccentOptions}" SelectedItem="{Binding Settings.AccentColor}"/>
-            <TextBlock Text="Work report template (optional)"/><DockPanel>
-              <Button DockPanel.Dock="Right" Content="Browse..." Click="ChooseTemplate_Click"/>
+        <TabItem Header="{loc:Translate Settings}" Tag="Settings">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+           <StackPanel Margin="22" MaxWidth="620" HorizontalAlignment="Left">
+            <TextBlock Text="{loc:Translate Settings}" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,12"/>
+            <TextBlock Text="{loc:Translate Language}" FontWeight="SemiBold"/>
+            <ComboBox ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding Settings.Language}"
+                      MinWidth="200" HorizontalAlignment="Left" Margin="0,4,0,16"/>
+            <TextBlock Text="{loc:Translate 'Work reminder time in local 24-hour format'}"/><TextBox Text="{Binding Settings.ReminderTime}" AcceptsReturn="False"/>
+            <CheckBox Content="{loc:Translate 'Enable daily work reminder'}" IsChecked="{Binding Settings.ReminderEnabled}" Margin="4,7"/>
+            <CheckBox Content="{loc:Translate 'Start application with Windows'}" IsChecked="{Binding Settings.StartWithWindows}" Margin="4,7"/>
+            <CheckBox Content="{loc:Translate 'Minimize to tray'}" IsChecked="{Binding Settings.MinimizeToTray}" Margin="4,7"/>
+            <CheckBox Content="{loc:Translate 'Launch log editor automatically'}" IsChecked="{Binding Settings.LaunchLogAutomatically}" Margin="4,7"/>
+            <CheckBox Content="{loc:Translate 'Show Windows notification'}" IsChecked="{Binding Settings.ShowNotification}" Margin="4,7"/>
+            <TextBlock Text="{loc:Translate Theme}"/><ComboBox ItemsSource="{Binding ThemeOptions}" ItemTemplate="{StaticResource LocalizedOptionTemplate}" SelectedItem="{Binding Settings.Theme}"/>
+            <TextBlock Text="{loc:Translate 'Accent color'}"/><ComboBox ItemsSource="{Binding AccentOptions}" SelectedItem="{Binding Settings.AccentColor}"/>
+            <TextBlock Text="{loc:Translate 'Work report template (optional)'}"/><DockPanel>
+              <Button DockPanel.Dock="Right" Content="{loc:Translate 'Browse...'}" Click="ChooseTemplate_Click"/>
               <TextBox Text="{Binding Settings.WorkReportTemplatePath}" AcceptsReturn="False"/>
             </DockPanel>
             <WrapPanel Margin="0,10,0,0">
-              <Button Content="Save settings" Command="{Binding SaveSettingsCommand}"/>
-              <Button Content="Test reminder now" Command="{Binding TestReminderCommand}"/>
-              <Button Content="Backup database" Click="Backup_Click"/>
-              <Button Content="Create custom category" Click="AddCategory_Click"/>
+              <Button Content="{loc:Translate 'Save settings'}" Command="{Binding SaveSettingsCommand}"/>
+              <Button Content="{loc:Translate 'Test reminder now'}" Command="{Binding TestReminderCommand}"/>
+              <Button Content="{loc:Translate 'Backup database'}" Click="Backup_Click"/>
+              <Button Content="{loc:Translate 'Create custom category'}" Click="AddCategory_Click"/>
             </WrapPanel>
-          </StackPanel>
+           </StackPanel>
+          </ScrollViewer>
         </TabItem>
       </TabControl>
       <Border Background="#FFF5D9" CornerRadius="10" Padding="12" Margin="26,4" VerticalAlignment="Top"
               Visibility="{Binding IsReminderOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
         <DockPanel>
-          <StackPanel><TextBlock Text="Work Log Reminder" FontWeight="Bold" FontSize="17"/>
-            <TextBlock Text="It's time to record today's work." Margin="0,3"/></StackPanel>
-          <Button DockPanel.Dock="Right" Content="Dismiss today" Command="{Binding DismissReminderCommand}"/>
+          <StackPanel><TextBlock Text="{loc:Translate 'Work Log Reminder'}" FontWeight="Bold" FontSize="17"/>
+            <TextBlock Text="{loc:Translate 'Time to record your work today.'}" Margin="0,3"/></StackPanel>
+          <Button DockPanel.Dock="Right" Content="{loc:Translate 'Dismiss today'}" Command="{Binding DismissReminderCommand}"/>
         </DockPanel>
       </Border>
     </Grid>

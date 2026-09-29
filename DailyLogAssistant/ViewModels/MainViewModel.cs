@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DailyLogAssistant.Helpers;
+using DailyLogAssistant.Localization;
 using DailyLogAssistant.Models;
 using DailyLogAssistant.Services;
 using Serilog;
@@ -20,6 +21,8 @@ public partial class MainViewModel(
 {
     [ObservableProperty] private string activeSection = "Dashboard";
     [ObservableProperty] private DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
+    [ObservableProperty] private DateOnly calendarMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    [ObservableProperty] private DateOnly selectedCalendarDate = DateOnly.FromDateTime(DateTime.Today);
     [ObservableProperty] private string title = "";
     [ObservableProperty] private string project = "";
     [ObservableProperty] private string status = "Completed";
@@ -48,6 +51,10 @@ public partial class MainViewModel(
     [ObservableProperty] private string customCategoryName = "";
     [ObservableProperty] private string customCategoryIcon = "●";
     [ObservableProperty] private string customCategoryColor = "#315C4C";
+    [ObservableProperty] private LogCategory? quickAddCategory;
+    [ObservableProperty] private string quickAddTitle = "";
+    [ObservableProperty] private string quickAddContent = "";
+    [ObservableProperty] private string quickAddStatus = "Completed";
     [ObservableProperty] private DateOnly historyStartDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-7));
     [ObservableProperty] private DateOnly historyEndDate = DateOnly.FromDateTime(DateTime.Today);
     [ObservableProperty] private DateOnly exportStartDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-6));
@@ -64,27 +71,110 @@ public partial class MainViewModel(
     [ObservableProperty] private ObservableCollection<LogCategory> categories = [];
     [ObservableProperty] private ObservableCollection<Tag> tags = [];
     [ObservableProperty] private ObservableCollection<LogEntry> history = [];
+    [ObservableProperty] private ObservableCollection<LogEntry> recentLogs = [];
+    [ObservableProperty] private ObservableCollection<CalendarDay> calendarDays = [];
+    [ObservableProperty] private ObservableCollection<LogEntry> calendarEntries = [];
+    [ObservableProperty] private int todayLogCount;
+    [ObservableProperty] private int weeklyWorkCompleted;
+    [ObservableProperty] private int weeklyWorkTotal;
     [ObservableProperty] private bool isReminderOpen;
     [ObservableProperty] private bool initialized;
     private int _editingId;
+    private List<LogEntry> _calendarMonthLogs = [];
 
-    public string TodayText => DateTime.Today.ToString("dddd, d MMMM yyyy");
-    public string TodayStatus => TodayWorkLog is null ? "Work log pending" : "Work log completed";
-    public string TodaySummary => TodayWorkLog?.DisplayContent ?? "No work entry yet. Record today's progress.";
+    public string TodayText => DateTime.Today.ToString("dddd, d MMMM yyyy", LocalizationService.Instance.CurrentCulture);
+    public string CalendarMonthText => CalendarMonth.ToString("MMMM yyyy", LocalizationService.Instance.CurrentCulture);
+    public string SelectedCalendarDateText => SelectedCalendarDate.ToString("dddd, d MMMM yyyy", LocalizationService.Instance.CurrentCulture);
+    public string WeeklyWorkSummary => WeeklyWorkTotal == 0
+        ? LocalizationService.Translate("No work logs this week")
+        : string.Format(LocalizationService.Instance.CurrentCulture,
+            LocalizationService.Translate("{0} of {1} completed"), WeeklyWorkCompleted, WeeklyWorkTotal);
+    public string TodayStatus => LocalizationService.Translate(
+        TodayWorkLog is null ? "Work log pending" : "Work log completed");
+    public string TodaySummary => TodayWorkLog?.DisplayContent ??
+        LocalizationService.Translate("No work entry yet. Record today's progress.");
     public string CategorySummary => string.Join("   •   ",
-        CategoryStatistics.Counts.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}: {pair.Value}"));
-    public string WorkCompletionText => CategoryStatistics.WorkTotal == 0 ? "No work logs yet" :
-        $"{CategoryStatistics.WorkCompleted}/{CategoryStatistics.WorkTotal} completed";
-    public string ReminderTimeText => $"Work reminder at {Settings.ReminderTime}";
+        CategoryStatistics.Counts.OrderBy(pair => pair.Key)
+            .Select(pair => $"{LocalizationService.Translate(pair.Key)}: {pair.Value}"));
+    public string WorkCompletionText => CategoryStatistics.WorkTotal == 0
+        ? LocalizationService.Translate("No work logs yet")
+        : $"{CategoryStatistics.WorkCompleted}/{CategoryStatistics.WorkTotal} {LocalizationService.Translate("completed")}";
+    public string ReminderTimeText => string.Format(LocalizationService.Instance.CurrentCulture,
+        LocalizationService.Translate("Work reminder at {0}"), Settings.ReminderTime);
+    public string TotalLogsText => string.Format(LocalizationService.Instance.CurrentCulture,
+        LocalizationService.Translate("Total logs: {0}"), Statistics.Total);
+    public string CurrentStreakText => string.Format(LocalizationService.Instance.CurrentCulture,
+        LocalizationService.Translate("Current work streak: {0} days"), Statistics.CurrentStreak);
+    public string LongestStreakText => string.Format(LocalizationService.Instance.CurrentCulture,
+        LocalizationService.Translate("Longest streak: {0} days"), Statistics.LongestStreak);
+    public string ThisMonthLogsText => string.Format(LocalizationService.Instance.CurrentCulture,
+        LocalizationService.Translate("Logs this month: {0}"), Statistics.ThisMonth);
+    public string WorkCompletionRateText => string.Format(LocalizationService.Instance.CurrentCulture,
+        LocalizationService.Translate("Work completion rate: {0}%"), Statistics.CompletionRate);
+    public string ThisYearLogsText => string.Format(LocalizationService.Instance.CurrentCulture,
+        LocalizationService.Translate("Logs this year: {0}"), CategoryStatistics.ThisYear);
     public string[] HistoryFilters { get; } = ["All time", "Today", "This week", "This month", "Custom range"];
     public string[] StatusOptions { get; } = ["Planned", "In Progress", "Completed", "Blocked", "Cancelled"];
+    public string[] HistoryStatusOptions { get; } = ["All statuses", "Planned", "In Progress", "Completed", "Blocked", "Cancelled"];
     public string[] ThemeOptions { get; } = ["System", "Light", "Dark"];
+    public string[] LanguageOptions { get; } = ["English", "Tiếng Việt", "Русский"];
     public string[] HistoryCategoryFilters => ["All categories", .. Categories.Select(category => category.Name)];
     public string[] HistoryTagFilters => ["All tags", .. Tags.Select(tag => tag.Name)];
     public string[] AccentOptions { get; } = ["#315C4C", "#2878B5", "#7953A9", "#C46A28", "#B43E45"];
     public string[] ExportFormats { get; } = ["Excel", "CSV", "TXT", "Markdown"];
     public string[] ExportCategories { get; } = ["WORK", "PERSONAL", "LETTER", "NOTE", "All categories"];
     public event EventHandler? ReminderRequested;
+    public event EventHandler? QuickAddSaved;
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        var selectedCategoryId = SelectedCategory?.Id;
+        var quickAddCategoryId = QuickAddCategory?.Id;
+        Categories = new ObservableCollection<LogCategory>(Categories);
+        SelectedCategory = Categories.FirstOrDefault(category => category.Id == selectedCategoryId);
+        QuickAddCategory = Categories.FirstOrDefault(category => category.Id == quickAddCategoryId);
+        OnPropertyChanged(nameof(TodayText));
+        OnPropertyChanged(nameof(CalendarMonthText));
+        OnPropertyChanged(nameof(SelectedCalendarDateText));
+        OnPropertyChanged(nameof(WeeklyWorkSummary));
+        OnPropertyChanged(nameof(TodayStatus));
+        OnPropertyChanged(nameof(TodaySummary));
+        OnPropertyChanged(nameof(CategorySummary));
+        OnPropertyChanged(nameof(WorkCompletionText));
+        OnPropertyChanged(nameof(ReminderTimeText));
+        OnPropertyChanged(nameof(TotalLogsText));
+        OnPropertyChanged(nameof(CurrentStreakText));
+        OnPropertyChanged(nameof(LongestStreakText));
+        OnPropertyChanged(nameof(ThisMonthLogsText));
+        OnPropertyChanged(nameof(WorkCompletionRateText));
+        OnPropertyChanged(nameof(ThisYearLogsText));
+        OnPropertyChanged(nameof(HistoryFilters));
+        OnPropertyChanged(nameof(StatusOptions));
+        OnPropertyChanged(nameof(ThemeOptions));
+        OnPropertyChanged(nameof(HistoryCategoryFilters));
+        OnPropertyChanged(nameof(HistoryTagFilters));
+        OnPropertyChanged(nameof(HistoryStatusOptions));
+        OnPropertyChanged(nameof(ExportFormats));
+        OnPropertyChanged(nameof(ExportCategories));
+        StatusMessage = LocalizationService.Translate("Ready");
+        UpdateCalendarSelection();
+        if (Initialized) _ = RefreshLocalizedViewsSafelyAsync();
+    }
+
+    private async Task RefreshLocalizedViewsSafelyAsync()
+    {
+        SelectedLog = null;
+        try
+        {
+            await RefreshHistoryAsync();
+            await RefreshDashboardAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not refresh localized views");
+            StatusMessage = LocalizationService.Translate("Could not refresh history.");
+        }
+    }
 
     partial void OnSelectedTagChanged(Tag? value)
     {
@@ -131,13 +221,28 @@ public partial class MainViewModel(
 
     partial void OnSettingsChanged(AppSettings value) => OnPropertyChanged(nameof(ReminderTimeText));
 
+    partial void OnStatisticsChanged(LogStatistics value)
+    {
+        OnPropertyChanged(nameof(TotalLogsText));
+        OnPropertyChanged(nameof(CurrentStreakText));
+        OnPropertyChanged(nameof(LongestStreakText));
+        OnPropertyChanged(nameof(ThisMonthLogsText));
+        OnPropertyChanged(nameof(WorkCompletionRateText));
+    }
+
+    partial void OnCategoryStatisticsChanged(CategoryStatistics value) =>
+        OnPropertyChanged(nameof(ThisYearLogsText));
+
     public async Task InitializeAsync()
     {
         Settings = await settingsService.GetAsync();
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+        LocalizationService.SetLanguage(Settings.Language);
         Categories = new ObservableCollection<LogCategory>(await categoryService.GetCategoriesAsync());
         Tags = new ObservableCollection<Tag>(await tagService.GetTagsAsync());
         OnPropertyChanged(nameof(HistoryCategoryFilters));
         OnPropertyChanged(nameof(HistoryTagFilters));
+        OnPropertyChanged(nameof(HistoryStatusOptions));
         SelectedCategory = Categories.FirstOrDefault(category => category.Name == "WORK");
         await RefreshHistoryAsync();
         await RefreshDashboardAsync();
@@ -158,6 +263,7 @@ public partial class MainViewModel(
             return;
         }
         ActiveSection = section;
+        if (section == "Calendar") await RefreshCalendarAsync();
     }
 
     [RelayCommand] private void NewWork() => StartNewLog("WORK");
@@ -167,6 +273,34 @@ public partial class MainViewModel(
 
     [RelayCommand]
     private async Task OpenTodayWorkAsync() => await NavigateAsync("WORK");
+
+    [RelayCommand]
+    private async Task PreviousCalendarMonthAsync() => await ChangeCalendarMonthAsync(-1);
+
+    [RelayCommand]
+    private async Task NextCalendarMonthAsync() => await ChangeCalendarMonthAsync(1);
+
+    [RelayCommand]
+    private async Task CurrentCalendarMonthAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        CalendarMonth = new DateOnly(today.Year, today.Month, 1);
+        SelectedCalendarDate = today;
+        SelectedLog = null;
+        OnPropertyChanged(nameof(CalendarMonthText));
+        OnPropertyChanged(nameof(SelectedCalendarDateText));
+        await RefreshCalendarAsync();
+    }
+
+    [RelayCommand]
+    private void SelectCalendarDay(CalendarDay? day)
+    {
+        if (day is null || !day.IsInDisplayedMonth) return;
+        SelectedCalendarDate = day.Date;
+        SelectedLog = null;
+        OnPropertyChanged(nameof(SelectedCalendarDateText));
+        UpdateCalendarSelection();
+    }
 
     private void StartNewLog(string categoryName)
     {
@@ -184,32 +318,56 @@ public partial class MainViewModel(
     private async Task SaveLogAsync()
     {
         if (SelectedCategory is null) return;
+        await SaveDraftAsync(new LogEntry
+        {
+            Id = _editingId,
+            CategoryId = SelectedCategory.Id,
+            Date = SelectedDate,
+            Title = Title.Trim(),
+            Project = Project.Trim(),
+            Status = Status,
+            Recipient = Recipient.Trim(),
+            Mood = Mood.Trim(),
+            Opening = Opening,
+            Body = Body,
+            Closing = Closing,
+            Signature = Signature,
+            Content = Content,
+            ThingsToRemember = ThingsToRemember,
+            Result = Result,
+            Problems = Problems,
+            Notes = Notes,
+            TagsText = TagsText
+        });
+    }
+
+    private async Task SaveDraftAsync(LogEntry draft, bool isQuickAdd = false)
+    {
         try
         {
-            await logs.SaveLogAsync(new LogEntry
-            {
-                Id = _editingId,
-                CategoryId = SelectedCategory.Id,
-                Date = SelectedDate,
-                Title = Title.Trim(),
-                Project = Project.Trim(),
-                Status = Status,
-                Recipient = Recipient.Trim(),
-                Mood = Mood.Trim(),
-                Opening = Opening,
-                Body = Body,
-                Closing = Closing,
-                Signature = Signature,
-                Content = Content,
-                ThingsToRemember = ThingsToRemember,
-                Result = Result,
-                Problems = Problems,
-                Notes = Notes,
-                TagsText = TagsText
-            });
-            StatusMessage = "Log saved successfully.";
-            IsReminderOpen = false;
-            Log.Information("LogSaved for {Category} on {Date}", SelectedCategory.Name, SelectedDate);
+            await logs.SaveLogAsync(draft);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not save log");
+            StatusMessage = LocalizationService.Translate("Could not save this log.");
+            System.Windows.MessageBox.Show($"{StatusMessage}\n\n{LocalizationService.TranslateException(ex)}",
+                LocalizationService.Translate("Personal Log Manager"),
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            return;
+        }
+
+        StatusMessage = LocalizationService.Translate("Log saved successfully.");
+        IsReminderOpen = false;
+        Log.Information("LogSaved for {CategoryId} on {Date}", draft.CategoryId, draft.Date);
+        if (isQuickAdd)
+        {
+            QuickAddTitle = QuickAddContent = "";
+            QuickAddSaved?.Invoke(this, EventArgs.Empty);
+        }
+
+        try
+        {
             Tags = new ObservableCollection<Tag>(await tagService.GetTagsAsync());
             OnPropertyChanged(nameof(HistoryTagFilters));
             await RefreshHistoryAsync();
@@ -217,11 +375,44 @@ public partial class MainViewModel(
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not save log");
-            StatusMessage = "Could not save this log.";
-            System.Windows.MessageBox.Show($"{StatusMessage}\n\n{ex.Message}", "Personal Log Manager",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            Log.Error(ex, "Could not refresh the application after saving a log");
+            StatusMessage = LocalizationService.Translate("Log saved, but the views could not be refreshed.");
+            System.Windows.MessageBox.Show($"{StatusMessage}\n\n{LocalizationService.TranslateException(ex)}",
+                LocalizationService.Translate("Personal Log Manager"),
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
+    }
+
+    public void PrepareQuickAdd()
+    {
+        QuickAddCategory = Categories.FirstOrDefault(category => category.Name == "WORK")
+            ?? Categories.FirstOrDefault();
+        QuickAddTitle = "";
+        QuickAddContent = "";
+        QuickAddStatus = "Completed";
+    }
+
+    [RelayCommand]
+    private async Task SaveQuickAddAsync()
+    {
+        if (QuickAddCategory is null)
+        {
+            System.Windows.MessageBox.Show(LocalizationService.Translate("Select a log type."),
+                LocalizationService.Translate("Quick add"),
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        var isLetter = QuickAddCategory.Name == "LETTER";
+        await SaveDraftAsync(new LogEntry
+        {
+            CategoryId = QuickAddCategory.Id,
+            Date = DateOnly.FromDateTime(DateTime.Today),
+            Title = QuickAddTitle.Trim(),
+            Status = QuickAddStatus,
+            Body = isLetter ? QuickAddContent : "",
+            Content = isLetter ? "" : QuickAddContent
+        }, isQuickAdd: true);
     }
 
     [RelayCommand]
@@ -258,14 +449,15 @@ public partial class MainViewModel(
         {
             await logs.DeleteLogAsync(SelectedLog.Id);
             SelectedLog = null;
-            StatusMessage = "Log deleted.";
+            StatusMessage = LocalizationService.Translate("Log deleted.");
             await RefreshHistoryAsync();
             await RefreshDashboardAsync();
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Could not delete log");
-            System.Windows.MessageBox.Show(ex.Message, "Personal Log Manager",
+            System.Windows.MessageBox.Show(LocalizationService.TranslateException(ex),
+                LocalizationService.Translate("Personal Log Manager"),
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
     }
@@ -285,7 +477,8 @@ public partial class MainViewModel(
     {
         if (!TimeOnly.TryParse(Settings.ReminderTime, out var reminderTime))
         {
-            System.Windows.MessageBox.Show("Enter a valid time such as 17:00.", "Settings",
+            System.Windows.MessageBox.Show(LocalizationService.Translate("Enter a valid time such as 17:00."),
+                LocalizationService.Translate("Settings"),
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             return;
         }
@@ -294,14 +487,16 @@ public partial class MainViewModel(
             Settings.ReminderTime = reminderTime.ToString("HH:mm");
             autoStart.SetEnabled(Settings.StartWithWindows);
             await settingsService.SaveAsync(Settings);
+            LocalizationService.SetLanguage(Settings.Language);
             themeService.Apply(Settings);
             OnPropertyChanged(nameof(ReminderTimeText));
-            StatusMessage = "Settings saved.";
+            StatusMessage = LocalizationService.Translate("Settings saved.");
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Could not save settings");
-            System.Windows.MessageBox.Show(ex.Message, "Settings",
+            System.Windows.MessageBox.Show(LocalizationService.TranslateException(ex),
+                LocalizationService.Translate("Settings"),
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
     }
@@ -313,7 +508,9 @@ public partial class MainViewModel(
         await settingsService.SnoozeAsync(duration);
         Settings = await settingsService.GetAsync();
         IsReminderOpen = false;
-        StatusMessage = $"Work reminder snoozed for {(int)duration.TotalMinutes} minutes.";
+        StatusMessage = string.Format(LocalizationService.Instance.CurrentCulture,
+            LocalizationService.Translate("Work reminder snoozed for {0} minutes."),
+            (int)duration.TotalMinutes);
     }
 
     [RelayCommand]
@@ -322,7 +519,7 @@ public partial class MainViewModel(
         await settingsService.DismissTodayAsync();
         Settings = await settingsService.GetAsync();
         IsReminderOpen = false;
-        StatusMessage = "Reminder dismissed for today.";
+        StatusMessage = LocalizationService.Translate("Reminder dismissed for today.");
     }
 
     [RelayCommand]
@@ -340,7 +537,7 @@ public partial class MainViewModel(
         SelectedTag = tag;
         Tags = new ObservableCollection<Tag>(await tagService.GetTagsAsync());
         OnPropertyChanged(nameof(HistoryTagFilters));
-        StatusMessage = "Tag saved.";
+        StatusMessage = LocalizationService.Translate("Tag saved.");
     }
 
     [RelayCommand]
@@ -352,7 +549,7 @@ public partial class MainViewModel(
         Tags = new ObservableCollection<Tag>(await tagService.GetTagsAsync());
         OnPropertyChanged(nameof(HistoryTagFilters));
         await RefreshHistoryAsync();
-        StatusMessage = "Tag deleted.";
+        StatusMessage = LocalizationService.Translate("Tag deleted.");
     }
 
     public async Task CreateCategoryAsync(string name, string icon, string color)
@@ -360,7 +557,7 @@ public partial class MainViewModel(
         await categoryService.CreateCustomCategoryAsync(name, icon, color);
         Categories = new ObservableCollection<LogCategory>(await categoryService.GetCategoriesAsync());
         OnPropertyChanged(nameof(HistoryCategoryFilters));
-        StatusMessage = "Custom category created.";
+        StatusMessage = LocalizationService.Translate("Custom category created.");
     }
 
     public async Task LoadTodayForCategoryAsync(LogCategory category)
@@ -404,16 +601,59 @@ public partial class MainViewModel(
 
     public async Task RefreshDashboardAsync()
     {
-        TodayWorkLog = (await logs.SearchAsync(new LogQuery(
-            CategoryId: Categories.FirstOrDefault(category => category.Name == "WORK")?.Id,
-            From: DateOnly.FromDateTime(DateTime.Today),
-            To: DateOnly.FromDateTime(DateTime.Today)))).FirstOrDefault();
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        SelectedLog = null;
+        var todayEntries = await logs.SearchAsync(new LogQuery(From: today, To: today));
+        TodayLogCount = todayEntries.Count;
+        var workCategoryId = Categories.FirstOrDefault(category => category.Name == "WORK")?.Id;
+        TodayWorkLog = todayEntries.FirstOrDefault(entry => entry.CategoryId == workCategoryId);
         OnPropertyChanged(nameof(TodayStatus));
         OnPropertyChanged(nameof(TodaySummary));
+        var weekEntries = workCategoryId is null
+            ? []
+            : await logs.SearchAsync(new LogQuery(CategoryId: workCategoryId,
+                From: DateTimeHelper.GetStartOfWeek(today), To: today));
+        WeeklyWorkTotal = weekEntries.Count;
+        WeeklyWorkCompleted = weekEntries.Count(entry => entry.Status == "Completed");
+        OnPropertyChanged(nameof(WeeklyWorkSummary));
+        RecentLogs = new ObservableCollection<LogEntry>(await logs.GetRecentAsync(5));
         Statistics = await statisticsService.GetAsync();
         CategoryStatistics = await statisticsService.GetCategoriesAsync();
         OnPropertyChanged(nameof(CategorySummary));
         OnPropertyChanged(nameof(WorkCompletionText));
+        await RefreshCalendarAsync();
+    }
+
+    public async Task RefreshCalendarAsync()
+    {
+        SelectedLog = null;
+        var monthStart = new DateOnly(CalendarMonth.Year, CalendarMonth.Month, 1);
+        var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+        _calendarMonthLogs = await logs.SearchAsync(new LogQuery(From: monthStart, To: monthEnd));
+        UpdateCalendarSelection();
+    }
+
+    private async Task ChangeCalendarMonthAsync(int months)
+    {
+        CalendarMonth = new DateOnly(CalendarMonth.Year, CalendarMonth.Month, 1).AddMonths(months);
+        SelectedCalendarDate = CalendarMonth;
+        SelectedLog = null;
+        OnPropertyChanged(nameof(CalendarMonthText));
+        OnPropertyChanged(nameof(SelectedCalendarDateText));
+        await RefreshCalendarAsync();
+    }
+
+    private void UpdateCalendarSelection()
+    {
+        var marks = _calendarMonthLogs.GroupBy(entry => entry.Date)
+            .ToDictionary(group => group.Key, group => new CalendarDayMark(
+                group.Count(),
+                group.Select(entry => entry.Category?.Color)
+                    .FirstOrDefault(color => !string.IsNullOrWhiteSpace(color)) ?? "#315C4C"));
+        CalendarDays = new ObservableCollection<CalendarDay>(
+            CalendarHelper.BuildMonthGrid(CalendarMonth, marks, SelectedCalendarDate));
+        CalendarEntries = new ObservableCollection<LogEntry>(
+            _calendarMonthLogs.Where(entry => entry.Date == SelectedCalendarDate));
     }
 
     public LogQuery GetExportQuery()
@@ -440,7 +680,11 @@ public partial class MainViewModel(
     private async Task LoadEntrySafelyAsync()
     {
         try { await RefreshHistoryAsync(); }
-        catch (Exception ex) { Log.Error(ex, "Could not refresh log history"); StatusMessage = "Could not refresh history."; }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Could not refresh log history");
+            StatusMessage = LocalizationService.Translate("Could not refresh history.");
+        }
     }
 
     private async Task RefreshHistorySafelyAsync() => await LoadEntrySafelyAsync();

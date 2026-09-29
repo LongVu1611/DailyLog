@@ -1,5 +1,5 @@
 #define AppName "Personal Log Manager"
-#define AppVersion "2.0.0"
+#define AppVersion "2.1.0"
 #define AppExeName "PersonalLogManager.exe"
 
 [Setup]
@@ -21,7 +21,7 @@ RestartApplications=no
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
-VersionInfoVersion=2.0.0.0
+VersionInfoVersion=2.1.0.0
 VersionInfoProductName={#AppName}
 VersionInfoProductVersion={#AppVersion}
 

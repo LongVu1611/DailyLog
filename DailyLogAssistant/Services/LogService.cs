@@ -7,6 +7,16 @@ namespace DailyLogAssistant.Services;
 
 public sealed class LogService(IDbContextFactory<AppDbContext> factory) : ILogService
 {
+    public async Task<List<LogEntry>> GetRecentAsync(int count, CancellationToken cancellationToken = default)
+    {
+        if (count <= 0) return [];
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.Logs.AsNoTracking().Include(log => log.Category)
+            .Include(log => log.LogTags).ThenInclude(link => link.Tag)
+            .OrderByDescending(log => log.Date).ThenByDescending(log => log.UpdatedAt)
+            .Take(count).ToListAsync(cancellationToken);
+    }
+
     public async Task<List<LogEntry>> SearchAsync(LogQuery filter, CancellationToken cancellationToken = default)
     {
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
